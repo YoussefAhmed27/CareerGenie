@@ -1,5 +1,7 @@
 # CareerGenie Setup Guide
 
+## 0. Make sure you are on CareerGenieV1 branch in VS Code (this is the new default branch so don't touch the main branch!)
+
 ## 1. Prerequisites
 * Node.js (v18+)
 * Python (v3.10+)
