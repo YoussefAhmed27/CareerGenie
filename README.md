@@ -37,7 +37,7 @@ conda env create -f environment.yml
 ```
 
 ## 4. Download Models (Manual)
-Download the heavy `.pth`, `.onnx`, and `.tar` weights from **[Link to be provided]**.
+Download the heavy `.pth`, `.onnx`, and `.tar` weights from **[(https://drive.google.com/drive/folders/1a04iZI-K1FPXZni300pi50I8MePLpgRG?usp=sharing)]**.
 * Place models into `backend-ai/models/`
 * Place weights into `backend-ai/weights/`
 *(See exact placement in the Directory Tree at the bottom).*
@@ -97,6 +97,7 @@ CareerGenie/
 │   ├── start_servers.bat
 │   ├── models/                <-- (DOWNLOADED Externally)
 │   │   ├── best_careergenie_endtoend.pth
+|   |   ├── best.pt
 │   │   ├── en_US-kristin-medium.onnx
 │   │   └── en_US-kristin-medium.onnx.json
 │   ├── recordings/            <-- (Empty folder tracked via .gitkeep)
