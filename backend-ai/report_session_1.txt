@@ -1,0 +1,29 @@
+==================================================
+CAREERGENIE Q&A HR REPORT: SESSION session_1
+==================================================
+
+Question 1 (0s - 10s)
+Transcript: Hi, David. I'm Youssef, engineer, AI engineer.
+Metrics: {'Interview Score': 5.5, 'Answer Score': 8.3, 'Speaking Skills': 8.4, 'Confidence': 7.6, 'Facial Expression': 4.7, 'Overall Perf': 7.5, 'Openness': 4.7, 'Conscientiousness': 6.7, 'Extraversion': 4.6, 'Agreeableness': 5.8, 'Neuroticism': 5.9, 'Overall Personality': 4.8}
+Speech Analytics: {'Pacing (WPM)': 40.3, 'Articulation (Syll/sec)': 7.3, 'Active Speaking (sec)': 2.5, 'Response Latency (sec)': 1.05, 'Silence Ratio (%)': 76.1, 'Longest Pause (sec)': 3.2, 'Avg Pause (sec)': 1.38, 'Expressiveness (Pitch Var)': 34.29, 'Volume Dynamics': 159.26, 'Vocal Tremor (Jitter)': 1.22}
+--------------------------------------------------
+Question 2 (11s - 20s)
+Transcript: Which model exactly?
+Metrics: {'Interview Score': 6.1, 'Answer Score': 7.5, 'Speaking Skills': 7.5, 'Confidence': 7.4, 'Facial Expression': 5.2, 'Overall Perf': 7.3, 'Openness': 4.6, 'Conscientiousness': 6.2, 'Extraversion': 4.8, 'Agreeableness': 5.9, 'Neuroticism': 4.6, 'Overall Personality': 5.3}
+Speech Analytics: {'Pacing (WPM)': 19.5, 'Articulation (Syll/sec)': 4.8, 'Active Speaking (sec)': 1.2, 'Response Latency (sec)': 6.85, 'Silence Ratio (%)': 86.5, 'Longest Pause (sec)': 1.15, 'Avg Pause (sec)': 0.6, 'Expressiveness (Pitch Var)': 6.28, 'Volume Dynamics': 224.43, 'Vocal Tremor (Jitter)': 1.71}
+--------------------------------------------------
+Question 3 (23s - 39s)
+Transcript: Well, I use the large language model, uh, like, uh, ChatGPT. That's proficient in understanding human context.
+Metrics: {'Interview Score': 5.2, 'Answer Score': 8.0, 'Speaking Skills': 8.1, 'Confidence': 7.3, 'Facial Expression': 4.4, 'Overall Perf': 7.2, 'Openness': 4.6, 'Conscientiousness': 6.5, 'Extraversion': 4.4, 'Agreeableness': 5.5, 'Neuroticism': 5.8, 'Overall Personality': 4.4}
+Speech Analytics: {'Pacing (WPM)': 62.2, 'Articulation (Syll/sec)': 5.5, 'Active Speaking (sec)': 5.9, 'Response Latency (sec)': 7.75, 'Silence Ratio (%)': 64.1, 'Longest Pause (sec)': 2.3, 'Avg Pause (sec)': 0.41, 'Expressiveness (Pitch Var)': 21.55, 'Volume Dynamics': 134.75, 'Vocal Tremor (Jitter)': 1.535}
+--------------------------------------------------
+Question 4 (45s - 55s)
+Transcript: What going challenge, dude? Well, at least we know it's running, Docker
+Metrics: {'Interview Score': 5.8, 'Answer Score': 8.6, 'Speaking Skills': 8.6, 'Confidence': 7.9, 'Facial Expression': 5.0, 'Overall Perf': 7.8, 'Openness': 5.0, 'Conscientiousness': 6.9, 'Extraversion': 5.0, 'Agreeableness': 6.0, 'Neuroticism': 5.8, 'Overall Personality': 5.0}
+Speech Analytics: {'Pacing (WPM)': 75.5, 'Articulation (Syll/sec)': 3.6, 'Active Speaking (sec)': 5.3, 'Response Latency (sec)': 2.25, 'Silence Ratio (%)': 44.5, 'Longest Pause (sec)': 0.6, 'Avg Pause (sec)': 0.29, 'Expressiveness (Pitch Var)': 15.15, 'Volume Dynamics': 96.3, 'Vocal Tremor (Jitter)': 2.682}
+--------------------------------------------------
+Question 5 (57s - 89s)
+Transcript: [SILENCE]
+Metrics: {'Interview Score': 6.9, 'Answer Score': 9.8, 'Speaking Skills': 9.3, 'Confidence': 8.8, 'Facial Expression': 6.1, 'Overall Perf': 8.7, 'Openness': 5.6, 'Conscientiousness': 7.6, 'Extraversion': 5.6, 'Agreeableness': 7.0, 'Neuroticism': 6.2, 'Overall Personality': 6.1}
+Speech Analytics: {'Pacing (WPM)': 1.9, 'Articulation (Syll/sec)': 1.1, 'Active Speaking (sec)': 2.8, 'Response Latency (sec)': 17.65, 'Silence Ratio (%)': 91.0, 'Longest Pause (sec)': 5.1, 'Avg Pause (sec)': 1.59, 'Expressiveness (Pitch Var)': 17.53, 'Volume Dynamics': 195.98, 'Vocal Tremor (Jitter)': 2.168}
+--------------------------------------------------
