@@ -1,7 +1,7 @@
 # CareerGenie Setup Guide
 
 ## 0. Make sure you are on CareerGenieV1 branch in VS Code (this is the new default branch so don't touch the main branch!)
-
+## 0. For general Platform usage, just run the frontend and node backend server (Do not run the ai servers --> these are excplicitly for interview simulation (Won't run for now so ignore!))
 ## 1. Prerequisites
 * Node.js (v18+)
 * Python (v3.10+)
