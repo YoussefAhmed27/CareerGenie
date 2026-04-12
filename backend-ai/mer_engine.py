@@ -43,6 +43,11 @@ class SpeechAnalyticsExtractor:
         word_count = len(words)
         syllables = sum(1 for char in "".join(words) if char in "aeiouy")
 
+        # Extract filler words ratio
+        fillers = ['um', 'uh', 'like', 'literally', 'basically', 'actually']
+        filler_count = sum(words.count(f) for f in fillers)
+        filler_ratio = (filler_count / word_count * 100) if word_count > 0 else 0.0
+
         # Acoustic metrics (OpenSmile)
         pitch_variance = 0.0
         loudness_variance = 0.0
@@ -117,7 +122,8 @@ class SpeechAnalyticsExtractor:
             "Avg Pause (sec)": round(avg_pause, 2),
             "Expressiveness (Pitch Var)": round(pitch_variance, 2),
             "Volume Dynamics": round(loudness_variance, 2),
-            "Vocal Tremor (Jitter)": round(vocal_tremor, 3)
+            "Vocal Tremor (Jitter)": round(vocal_tremor, 3),
+            "Filler Word Ratio (%)": round(filler_ratio, 1)
         }
 
 # Neural Network Architectures for MER
@@ -427,7 +433,7 @@ class MERPipeline:
                 end_t = float(qa["end"])
                 duration_sec = end_t - start_t
                 
-                # --- AUDIO EXTRACTION FOR SPEECH ANALYTICS ---
+                # Audio Extraction for speech analytics
                 start_sample = min(int(start_t * SAMPLE_RATE), len(audio))
                 end_sample = min(int(end_t * SAMPLE_RATE), len(audio))
                 q_audio_chunk = audio[start_sample:end_sample]
@@ -439,7 +445,7 @@ class MERPipeline:
                 full_transcript = qa.get("transcript", "").strip()
                 if not full_transcript: full_transcript = "[SILENCE]"
                 
-                # --- EXTRACT SPEECH ANALYTICS ---
+                
                 speech_stats = self.speech_analytics.extract_metrics(q_audio_chunk, SAMPLE_RATE, full_transcript, duration_sec)
 
                 for i in range(start_idx, end_idx):
@@ -460,7 +466,7 @@ class MERPipeline:
                     base_scores = (raw_pred - self.min_vals) / (self.max_vals - self.min_vals + 1e-8)
                     
                     MEDIAN = 0.5  
-                    STRETCH = 4.0         
+                    STRETCH = 4.0        
                     stretched_scores = MEDIAN + ((base_scores - MEDIAN) * STRETCH)
                     ui_scores = np.clip(stretched_scores * 10.0, 1.0, 10.0)
                     qa_scores_list.append(ui_scores)
@@ -475,7 +481,7 @@ class MERPipeline:
                 word_count = len(words_spoken)
                 
                 if full_transcript != "[SILENCE]" and 0 < word_count <= 3:
-                    print(f"⚠️ Short Answer Detected ({word_count} words) in {q_id}. Scaling down scores.")
+                    print(f"Short Answer Detected ({word_count} words) in {q_id}. Scaling down scores.")
                     penalty_factor = 0.75
                     final_q_score = final_q_score * penalty_factor
 

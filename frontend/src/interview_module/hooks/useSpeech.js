@@ -9,6 +9,8 @@ globalAnalyser.smoothingTimeConstant = 0.1;
 globalAnalyser.fftSize = 256;
 globalAnalyser.connect(audioCtx.destination);
 
+const recordingDestination = audioCtx.createMediaStreamDestination();
+
 const VISEME_WEIGHTS = {
   viseme_PP: 0.4, viseme_FF: 0.6, viseme_TH: 0.7,
   viseme_DD: 0.5, viseme_kk: 0.5, viseme_CH: 0.7,
@@ -33,16 +35,17 @@ function buildSchedule(visemes, startTime, duration) {
   });
 }
 
-export const useSpeech = (sessionId, isAvatarReady = false) => {
+export const useSpeech = (sessionId, isAvatarReady = false, mode = 'interview') => {
   const [isListening, setIsListening]                 = useState(false);
   const [messages, setMessages]                       = useState([]);
   const [scheduledVisemes, setScheduledVisemes]       = useState([]);
   const [isInterviewComplete, setIsInterviewComplete] = useState(false);
-  const [isVideoUploaded, setIsVideoUploaded]         = useState(false);
+
+  const [isVideoUploaded, setIsVideoUploaded]         = useState(mode === 'coaching');
   const [isAnalyzing, setIsAnalyzing]                 = useState(false);
 
-  const [isCodingQuestion, setIsCodingQuestion]     = useState(false);
-  const [codingQuestionText, setCodingQuestionText] = useState('');
+  const [isCodingQuestion, setIsCodingQuestion]       = useState(false);
+  const [codingQuestionText, setCodingQuestionText]   = useState('');
   const codingTriggeredRef     = useRef(false);
   const pendingSandboxCloseRef = useRef(false);
 
@@ -65,6 +68,8 @@ export const useSpeech = (sessionId, isAvatarReady = false) => {
   const answerStartTimeRef    = useRef(0);
   const questionCounterRef    = useRef(1);
   const currentAnswerTextRef  = useRef('');
+  
+  const lastUserSpeechTimeRef = useRef(0); 
 
   const submitCodeToAgent = useCallback((code, output, language) => {
     if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
@@ -76,18 +81,26 @@ export const useSpeech = (sessionId, isAvatarReady = false) => {
   useEffect(() => {
     if (!sessionId || !isAvatarReady) return;
 
-    const ws = new WebSocket(`ws://127.0.0.1:8000/ws/interview/${sessionId}`);
+    // Pass the mode param to backend
+    const ws = new WebSocket(`ws://127.0.0.1:8000/ws/interview/${sessionId}?mode=${mode}`);
     ws.binaryType = 'arraybuffer';
 
     ws.onmessage = (event) => {
       if (event.data instanceof ArrayBuffer) {
+        
         if (!isAgentSpeakingRef.current && answerStartTimeRef.current > 0 && recordingStartTimeRef.current) {
-            const nowSeconds = (Date.now() - recordingStartTimeRef.current) / 1000;
-            if (nowSeconds - answerStartTimeRef.current > 2.0) {
+            
+            let endSeconds = lastUserSpeechTimeRef.current + 1.0;
+            
+            if (endSeconds <= answerStartTimeRef.current) {
+                endSeconds = (Date.now() - recordingStartTimeRef.current) / 1000; 
+            }
+
+            if (endSeconds - answerStartTimeRef.current > 1.5) {
                 qaIntervalsRef.current.push({
                     q_id: `Question ${questionCounterRef.current}`,
                     start: answerStartTimeRef.current,
-                    end: nowSeconds,
+                    end: endSeconds,
                     transcript: currentAnswerTextRef.current.trim()
                 });
                 questionCounterRef.current += 1;
@@ -117,7 +130,10 @@ export const useSpeech = (sessionId, isAvatarReady = false) => {
 
         const source = audioCtx.createBufferSource();
         source.buffer = audioBuffer;
+        
         source.connect(globalAnalyser);
+        source.connect(recordingDestination);
+        
         source.start(nextPlayTimeRef.current);
         nextPlayTimeRef.current    += audioBuffer.duration;
         utteranceEndTimeRef.current = nextPlayTimeRef.current;
@@ -185,6 +201,9 @@ export const useSpeech = (sessionId, isAvatarReady = false) => {
           const cleanText = data.text.replace(CODING_TAG, '').replace(INTERVIEW_TAG, '').trim();
 
           if (senderType === 'user') {
+              if (recordingStartTimeRef.current) {
+                  lastUserSpeechTimeRef.current = (Date.now() - recordingStartTimeRef.current) / 1000;
+              }
               currentAnswerTextRef.current += (currentAnswerTextRef.current ? ' ' : '') + cleanText;
           }
 
@@ -207,7 +226,7 @@ export const useSpeech = (sessionId, isAvatarReady = false) => {
     return () => {
       if (ws.readyState === WebSocket.OPEN) ws.close();
     };
-  }, [sessionId, isAvatarReady]);
+  }, [sessionId, isAvatarReady, mode]);
 
   const startListening = useCallback(async () => {
     if (isListening) return;
@@ -215,9 +234,19 @@ export const useSpeech = (sessionId, isAvatarReady = false) => {
       if (audioCtx.state === 'suspended') await audioCtx.resume();
       const stream = await getSharedMediaStream();
       
-      if (!mediaRecorderRef.current) {
+      const micSource = audioCtx.createMediaStreamSource(stream);
+      micSource.connect(recordingDestination);
+
+      const mixedStream = new MediaStream([
+        ...stream.getVideoTracks(),
+        ...recordingDestination.stream.getAudioTracks()
+      ]);
+
+      // Bypass MediaRecorder entirely if we are in coaching mode
+      if (!mediaRecorderRef.current && mode !== 'coaching') {
         recordedChunksRef.current = [];
-        const recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+        
+        const recorder = new MediaRecorder(mixedStream, { mimeType: 'video/webm' });
         
         recordingStartTimeRef.current = Date.now();
         
@@ -230,12 +259,16 @@ export const useSpeech = (sessionId, isAvatarReady = false) => {
             const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
             
             if (answerStartTimeRef.current > 0 && recordingStartTimeRef.current) {
-                const nowSeconds = (Date.now() - recordingStartTimeRef.current) / 1000;
-                if (nowSeconds - answerStartTimeRef.current > 2.0) {
+                let endSeconds = lastUserSpeechTimeRef.current + 1.0;
+                if (endSeconds <= answerStartTimeRef.current) {
+                    endSeconds = (Date.now() - recordingStartTimeRef.current) / 1000; 
+                }
+
+                if (endSeconds - answerStartTimeRef.current > 1.5) {
                     qaIntervalsRef.current.push({
                         q_id: `Question ${questionCounterRef.current}`,
                         start: answerStartTimeRef.current,
-                        end: nowSeconds,
+                        end: endSeconds,
                         transcript: currentAnswerTextRef.current.trim()
                     });
                 }
@@ -284,7 +317,7 @@ export const useSpeech = (sessionId, isAvatarReady = false) => {
     } catch (err) {
       console.error("Mic Error:", err);
     }
-  }, [isListening, sessionId]);
+  }, [isListening, sessionId, mode]);
 
   const stopListening = useCallback(() => {
     if (processorRef.current) {

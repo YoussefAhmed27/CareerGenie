@@ -1,16 +1,24 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useSpeech } from '../hooks/useSpeech';
 import Message from './Message';
 import FeedbackDisplay from './FeedbackDisplay';
 import Experience from './Experience'; 
 import WebcamOverlay from './WebcamOverlay';
 import CodeSandbox from './Codesandbox';
+import AnalysisLoader from './AnalysisLoader'; 
 import '../interview-styles.css'; 
 
 export default function Chat() {
+  
   const navigate = useNavigate();
-  const sessionId = sessionStorage.getItem('current_session_id');
+  
+  // Grab params from URL (specifically the mode)
+  const [searchParams] = useSearchParams();
+  const urlSessionId = searchParams.get('sessionId');
+  const mode = searchParams.get('mode') || 'interview';
+  
+  const sessionId = urlSessionId || sessionStorage.getItem('current_session_id');
   const avatarConfig = JSON.parse(sessionStorage.getItem('current_avatar') || "{}");
 
   const [isAvatarReady, setIsAvatarReady] = useState(false);
@@ -30,7 +38,7 @@ export default function Chat() {
     submitCodeToAgent,
     isVideoUploaded,        
     setIsInterviewComplete  
-  } = useSpeech(sessionId, isAvatarReady);
+  } = useSpeech(sessionId, isAvatarReady, mode);
 
   const [feedbackData, setFeedbackData]           = useState(null);
   const [isFeedbackLoading, setIsFeedbackLoading] = useState(false);
@@ -58,6 +66,15 @@ export default function Chat() {
     if (reason) {
       setCheatReason(reason);
       return; 
+    }
+
+    // Terminate audio immediately and route home for Coaching Mode
+    if (mode === 'coaching') {
+        if (audioCtx && audioCtx.state === 'running') {
+            audioCtx.suspend();
+        }
+        navigate('/');
+        return;
     }
 
     setIsFeedbackLoading(true);
@@ -184,23 +201,18 @@ export default function Chat() {
     );
   }
 
-  if (feedbackData) {
-    if (!isVideoUploaded) {
-      return (
-        <div className="ai-theme-wrapper">
-          <div style={{ display: 'flex', height: '100vh', justifyContent: 'center', alignItems: 'center', background: '#11172c', color: 'white', flexDirection: 'column', gap: '15px' }}>
-            <div className="loader" style={{ border: '4px solid rgba(255,255,255,0.1)', borderTop: '4px solid #10b981', borderRadius: '50%', width: '40px', height: '40px', animation: 'spin 1s linear infinite' }}></div>
-            <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
-            <h2>Finalizing Video Processing...</h2>
-            <p style={{ color: '#8b949e' }}>Please wait while your recording is securely saved.</p>
-          </div>
-        </div>
-      );
-    }
+  
+  // show loading screen while awaiting feedback
+  if (isFeedbackLoading || (feedbackData && !isVideoUploaded)) {
+    return <AnalysisLoader />;
+  }
+
+  // Once everything is totally done, show the actual report
+  if (feedbackData && isVideoUploaded) {
     return <FeedbackDisplay data={feedbackData} sessionId={sessionId} />;
   }
 
-  const showSandbox = isCodingQuestion;
+  const showSandbox = isCodingQuestion && mode !== 'coaching';
 
   const styles = {
     container: {
@@ -228,7 +240,8 @@ export default function Chat() {
     endButton: {
       padding: '12px 24px', borderRadius: '30px',
       border: '1px solid rgba(255,255,255,0.2)',
-      background: 'rgba(255, 0, 0, 0.6)', color: 'white',
+      background: mode === 'coaching' ? 'rgba(0, 242, 254, 0.4)' : 'rgba(255, 0, 0, 0.6)', 
+      color: 'white',
       fontWeight: 'bold', cursor: 'pointer',
       backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', gap: '8px',
     },
@@ -252,7 +265,6 @@ export default function Chat() {
   return (
     <div className="ai-theme-wrapper" style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
       
-      {/* Empty bar*/}
       <div className="w-full bg-[#11152D] border-b border-white/10 h-20 flex items-center px-6 fixed top-0 left-0 z-50">
         <img 
           src="/logo.svg" 
@@ -261,6 +273,11 @@ export default function Chat() {
           onClick={() => navigate('/')} 
           title="Return to Home"
         />
+        {mode === 'coaching' && (
+           <div style={{ marginLeft: '20px', background: 'rgba(0,242,254,0.1)', color: '#00f2fe', padding: '6px 12px', borderRadius: '8px', fontWeight: 'bold', fontSize: '14px', border: '1px solid #00f2fe' }}>
+             LIVE COACHING SESSION
+           </div>
+        )}
       </div>
 
       <div style={styles.container}>
@@ -271,18 +288,21 @@ export default function Chat() {
               scheduledVisemes={scheduledVisemes}
               audioCtx={audioCtx}
               onReady={() => setIsAvatarReady(true)}
-              modelUrl={avatarConfig?.modelUrl}
+              modelUrl={mode === 'coaching' ? '/coach.glb' : avatarConfig?.modelUrl}
               config={avatarConfig?.profile}
             />
           </div>
 
-          <WebcamOverlay 
-            sessionId={sessionId}
-            isActive={isAvatarReady && !isInterviewComplete}
-            onTerminate={(reason) => {
-              handleEndInterview(reason);
-            }}
-          />
+          {/* ONLY render WebcamOverlay if NOT in coaching mode */}
+          {mode !== 'coaching' && (
+              <WebcamOverlay 
+                sessionId={sessionId}
+                isActive={isAvatarReady && !isInterviewComplete}
+                onTerminate={(reason) => {
+                  handleEndInterview(reason);
+                }}
+              />
+          )}
 
           <div style={styles.centerControl}>
             <button style={styles.micButton} onClick={handleMicToggle}>
@@ -301,7 +321,7 @@ export default function Chat() {
 
           <div style={styles.rightControl}>
             <button style={styles.endButton} onClick={() => handleEndInterview()} disabled={isFeedbackLoading}>
-              {isFeedbackLoading ? 'Generating Report...' : 'End Interview'}
+              {isFeedbackLoading ? 'Analyzing...' : (mode === 'coaching' ? 'End Session' : 'End Interview')}
             </button>
           </div>
         </div>

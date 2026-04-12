@@ -4,7 +4,7 @@ import asyncio
 import numpy as np
 import faiss
 import google.generativeai as genai
-from fastapi import FastAPI, HTTPException, UploadFile, File, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, UploadFile, File, WebSocket, WebSocketDisconnect, Query
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
@@ -36,16 +36,13 @@ DEEPGRAM_API_KEY = os.getenv("DEEPGRAM_API_KEY")
 if not GROQ_API_KEY or not GEMINI_API_KEY or not DEEPGRAM_API_KEY:
     raise RuntimeError("Missing API Keys in .env file (Groq, Gemini, or Deepgram).")
 
-# Toggle between Groq and gpt-4o
-USE_OPENAI = False
-
+USE_OPENAI = True
 
 async_groq_client = AsyncGroq(api_key=GROQ_API_KEY)
 genai.configure(api_key=GEMINI_API_KEY)
 deepgram = AsyncDeepgramClient(api_key=DEEPGRAM_API_KEY)
 tts_client = httpx.AsyncClient(timeout=None)
 
-# Models
 GROQ_CHAT_MODEL = "llama-3.3-70b-versatile"
 FEEDBACK_MODEL  = "openai/gpt-oss-120b" 
 STT_MODEL       = "whisper-large-v3-turbo"
@@ -63,7 +60,6 @@ app.add_middleware(
 
 SESSIONS = {}
 
-# recordings storage
 RECORDINGS_DIR = "recordings"
 os.makedirs(RECORDINGS_DIR, exist_ok=True)
 app.mount("/recordings", StaticFiles(directory=RECORDINGS_DIR), name="recordings")
@@ -76,35 +72,57 @@ Analyze the candidate's communication style using the provided interview transcr
 CRITICAL INSTRUCTIONS:
 1. NO EMOJIS. Under no circumstances should you use emojis in your output.
 2. BE EXHAUSTIVE: Every summary and bullet point MUST be highly detailed, professional, and at least 2-3 sentences long. Do not write short, lazy fragments. Elaborate deeply on the "why" and "how".
-3. DATA CALIBRATION: The raw numerical metrics (e.g., Facial Expression, Big 5) suffer from machine bias and may look artificially low. Cross-reference them against the transcript. If the numbers look low but the transcript shows a highly articulate, coherent answer, weight the transcript heavily to correct the machine's bias.
+3. DATA CALIBRATION (BIAS CORRECTION): The raw numerical metrics (e.g., Facial Expression, Big 5) suffer from machine bias and may look artificially low. Cross-reference them against the transcript. If the numbers look low but the transcript shows a highly articulate, coherent answer, weight the transcript heavily to correct the machine's bias.
+4. MATHEMATICAL DERIVATION: You must mathematically derive specific missing UI metrics using the provided raw data:
+   - 'engagement' (Float 1-10): Derive by blending 'Expressiveness (Pitch Var)', 'Overall Perf', and 'Openness'.
+   - 'nervousness' (Float 1-10): Derive directly from 'Vocal Tremor (Jitter)', 'Silence Ratio (%)', and 'Response Latency'.
+   - 'filler_word_usage' (Float 1-10): Derive from 'Filler Word Ratio (%)'. STRICT SCALE: If the average ratio is > 5%, the score MUST be below 5.0. If the ratio is < 2%, the score is 8.0+.
+   - For the other visual_metrics, use the raw 1-10 values (like Confidence) intelligently mapped from the MER Speech Analytics and Trait metrics. Keep everything as floats.
 
 You must output a STRICT JSON object matching this schema:
 {
-  "behavioral_score": <float 1-10>,
-  "overall_summary": "<string, write a comprehensive 4-5 sentence paragraph analyzing their executive presence, pacing, and confidence>",
-  "strengths": [
-      "<string, a detailed 3-sentence explanation of a specific communication strength>", 
-      "<string, a detailed 3-sentence explanation of another strength>"
-  ],
-  "weaknesses": [
-      "<string, a detailed 3-sentence explanation of a delivery flaw or hesitation>", 
-      "<string, a detailed 3-sentence explanation of another weakness>"
-  ],
-  "improvement_tips": [
-      "<string, a detailed, actionable 3-sentence coaching tip>", 
-      "<string, a detailed, actionable 3-sentence coaching tip>"
-  ],
-  "display_metrics": {
-     "confidence": <float 1-10>,
-     "nervousness": <float 1-10>, 
-     "engagement": <float 1-10>,
-     "big_5_traits": {
-         "openness": <int 1-10>,
-         "conscientiousness": <int 1-10>,
-         "extraversion": <int 1-10>,
-         "agreeableness": <int 1-10>,
-         "neuroticism": <int 1-10>
-     }
+  "header": {
+      "candidate_name": "<string, extract from transcript if possible, else 'Candidate'>",
+      "interview_date": "<string, output current date>",
+      
+  },
+  "top_section": {
+      "behavioral_score": <float 1-10, calibrated>,
+      "overall_summary": "<string, comprehensive 4-5 sentence paragraph analyzing their executive presence, pacing, and confidence>"
+  },
+  "visual_metrics": {
+      "communication": {
+          "pacing": <float 1-10>,
+          "fluency": <float 1-10>,
+          "clarity": <float 1-10>,
+          "tone_expressiveness": <float 1-10>,
+          "pause_control": <float 1-10>,
+          "filler_word_usage": <float 1-10>
+      },
+      "personality_traits": {
+          "confidence": <float 1-10>,
+          "nervousness": <float 1-10>,
+          "engagement": <float 1-10>,
+          "openness": <float 1-10>,
+          "conscientiousness": <float 1-10>,
+          "extraversion": <float 1-10>,
+          "agreeableness": <float 1-10>,
+          "neuroticism": <float 1-10>
+      }
+  },
+  "detailed_analysis": {
+      "strengths": [
+          "<string, detailed 3-sentence explanation of a specific communication strength>", 
+          "<string, detailed 3-sentence explanation of another strength>"
+      ],
+      "weaknesses": [
+          "<string, detailed 3-sentence explanation of a delivery flaw or hesitation>", 
+          "<string, detailed 3-sentence explanation of another weakness>"
+      ],
+      "improvement_tips": [
+          "<string, detailed, actionable 3-sentence coaching tip>", 
+          "<string, detailed, actionable 3-sentence coaching tip>"
+      ]
   }
 }
 """
@@ -117,24 +135,36 @@ CRITICAL INSTRUCTIONS:
 1. NO EMOJIS. Professional, enterprise-grade text only.
 2. BE EXHAUSTIVE: Every summary, strength, and weakness MUST be a detailed, 2-3 sentence paragraph. Lazy, 5-word bullet points are strictly prohibited.
 3. DO NOT evaluate their nervousness or speaking style here. Focus 100% on the engineering facts, vocabulary, algorithm choices, and correctness of their answers.
+4. DATA MAPPING: Derive the 'visual_metrics' floats strictly based on the technical merits of their answers in the transcript.
 
 You must output a STRICT JSON object matching this schema:
 {
-  "technical_score": <float 1-10>,
-  "overall_summary": "<string, a comprehensive 4-5 sentence paragraph critiquing their technical competency and domain expertise>",
-  "strengths": [
-      "<string, a detailed 3-sentence explanation of a technical strength or correct answer>", 
-      "<string, a detailed 3-sentence explanation of another technical strength>"
-  ],
-  "weaknesses": [
-      "<string, a detailed 3-sentence explanation of a knowledge gap or incorrect answer>", 
-      "<string, a detailed 3-sentence explanation of another knowledge gap>"
-  ],
-  "improvement_tips": [
-      "<string, a detailed 3-sentence technical study recommendation>", 
-      "<string, a detailed 3-sentence technical study recommendation>"
-  ],
-  "code_review": "<string, a deep, comprehensive paragraph critiquing their code efficiency, Big-O complexity, and syntax. If no code was written, output null>"
+  "top_section": {
+      "technical_score": <float 1-10>,
+      "overall_summary": "<string, comprehensive 4-5 sentence paragraph critiquing their technical competency and domain expertise>"
+  },
+  "visual_metrics": {
+      "relevance_to_question": <float 1-10>,
+      "job_alignment": <float 1-10>,
+      "answer_structure": <float 1-10>,
+      "technical_jargon_accuracy": <float 1-10>,
+      "problem_solving_logic": <float 1-10>
+  },
+  "detailed_analysis": {
+      "strengths": [
+          "<string, detailed 3-sentence explanation of a technical strength or correct answer>", 
+          "<string, detailed 3-sentence explanation of another technical strength>"
+      ],
+      "weaknesses": [
+          "<string, detailed 3-sentence explanation of a knowledge gap or incorrect answer>", 
+          "<string, detailed 3-sentence explanation of another knowledge gap>"
+      ],
+      "improvement_tips": [
+          "<string, detailed 3-sentence technical study recommendation>", 
+          "<string, detailed 3-sentence technical study recommendation>"
+      ],
+      "code_review": "<string, deep, comprehensive paragraph critiquing their code efficiency, Big-O complexity, and syntax. If no code was written, output null>"
+  }
 }
 """
 
@@ -180,7 +210,26 @@ EDGE CASE PROTOCOL
 OUTPUT: Raw plain text only. No markdown. Never speak tags aloud.
 """
 
-# --- PYDANTIC MODELS ---
+COACHING_SYSTEM_PROMPT = """
+You are "Orion", a warm, empathetic, and highly experienced Executive Career Coach. 
+Your goal is to help the candidate understand their recent mock interview performance and build their confidence.
+"Proactively offer 'Do-Overs'. If you are critiquing a weak answer, explicitly ask the candidate if they want to try answering it again right now, listen to their new attempt, and immediately give them feedback on it."
+
+CRITICAL SPEAKING INSTRUCTIONS (STRICT VOICE CONVERSATION FORMATTING):
+1. YOU ARE SPEAKING OUT LOUD ON A VOICE CALL. Act like a human being on the phone.
+2. NEVER use markdown, asterisks (*), bolding, hashtags (#), bullet points, or numbered lists. NEVER!
+3. KEEP IT SHORT. Maximum 2 to 3 sentences per response. This is a back-and-forth dialogue, not a lecture. Do NOT ramble.
+4. NEVER read the raw scores or read the report verbatim. Synthesize the feedback into natural, conversational advice (e.g., say "Your communication was really solid today" instead of "You got an 8 on fluency").
+5. DO NOT repeat yourself. If you already discussed a point, move on to the next topic naturally.
+6. Be extremely friendly and use casual phrasing ("Hey", "That makes total sense", "Let's dive into that").
+
+WHAT YOU KNOW: 
+You have the candidate's AI-generated Feedback Report in your memory. You know their overall strengths and weaknesses.
+
+WHAT YOU MUST SEARCH FOR: 
+You DO NOT have their CV, Job Description, or the exact Transcript of what they said. You MUST use the `search_knowledge_base` tool to find exact quotes or CV details if they ask for specific examples of what they did wrong or how to improve.
+"""
+
 class SessionStartRequest(BaseModel):
     cv_text: str
     jd_text: str
@@ -197,7 +246,6 @@ class FeedbackRequest(BaseModel):
     session_id: str
     mer_data: list = []
 
-# ── Piston code execution model
 class CodeExecutionRequest(BaseModel):
     language: str
     version: str
@@ -213,7 +261,6 @@ class CodeExecutionResponse(BaseModel):
 
 PISTON_API_URL = "http://localhost:2000/api/v2"
 
-# Helper function to extract text from PDF
 def extract_text_from_pdf(pdf_file_path_or_bytes: bytes) -> str:
     text = ""
     try:
@@ -227,7 +274,6 @@ def extract_text_from_pdf(pdf_file_path_or_bytes: bytes) -> str:
         raise HTTPException(status_code=500, detail=f"Failed to extract text from PDF: {str(e)}")
     return text
 
-# Dual-Agent RAG Search with Caching
 @lru_cache(maxsize=128)
 def cached_rag_search(session_id: str, query: str) -> str:
     if session_id not in SESSIONS:
@@ -240,12 +286,18 @@ def cached_rag_search(session_id: str, query: str) -> str:
     cv_context = "\n".join([doc.page_content for doc in cv_docs])
     jd_context = "\n".join([doc.page_content for doc in jd_docs])
 
-    return (
+    result = (
         f"=== CANDIDATE CV ===\n{cv_context}\n\n"
         f"=== JOB DESCRIPTION ===\n{jd_context}"
     )
-
-# Endpoints
+    
+    if "transcript_retriever" in session:
+        transcript_docs = session["transcript_retriever"].invoke(query)
+        transcript_context = "\n".join([doc.page_content for doc in transcript_docs])
+        if transcript_context.strip():
+            result += f"\n\n=== INTERVIEW TRANSCRIPT EXCERPTS ===\n{transcript_context}"
+            
+    return result
 
 async def stream_tts_to_websocket(text: str, websocket: WebSocket):
     dg_url = "https://api.deepgram.com/v1/speak?model=aura-2-odysseus-en"
@@ -289,6 +341,38 @@ async def start_session(request: SessionStartRequest):
     }
     return {"session_id": session_id}
 
+@app.post("/restart_session/{old_session_id}")
+async def restart_session(old_session_id: str):
+    if old_session_id not in SESSIONS:
+        raise HTTPException(status_code=404, detail="Original session expired or not found.")
+
+    old_data = SESSIONS[old_session_id]
+
+    embeddings = GoogleGenerativeAIEmbeddings(model=EMBEDDING_MODEL, google_api_key=GEMINI_API_KEY)
+    semantic_chunker = SemanticChunker(embeddings, breakpoint_threshold_type="percentile")
+
+    cv_docs = semantic_chunker.create_documents([f"CANDIDATE CV:\n{old_data['cv_text']}"])
+    jd_docs = semantic_chunker.create_documents([f"JOB DESCRIPTION:\n{old_data['jd_text']}"])
+
+    cv_vectorstore = LangchainFAISS.from_documents(cv_docs, embeddings)
+    jd_vectorstore = LangchainFAISS.from_documents(jd_docs, embeddings)
+
+    cv_retriever = cv_vectorstore.as_retriever(search_type="mmr", search_kwargs={'k': 3, 'fetch_k': 8})
+    jd_retriever = jd_vectorstore.as_retriever(search_type="mmr", search_kwargs={'k': 3, 'fetch_k': 8})
+
+    new_session_id = f"session_{len(SESSIONS) + 1}"
+    
+    SESSIONS[new_session_id] = {
+        "cv_retriever": cv_retriever,
+        "jd_retriever": jd_retriever,
+        "cv_text": old_data["cv_text"],
+        "jd_text": old_data["jd_text"],
+        "history": [],
+        "voice_id": old_data.get("voice_id", "aura-orpheus-en") 
+    }
+    
+    return {"session_id": new_session_id}
+
 @app.post("/upload_recording/{session_id}")
 async def upload_recording(session_id: str, file: UploadFile = File(...)):
     file_path = f"{RECORDINGS_DIR}/{session_id}.webm"
@@ -296,7 +380,7 @@ async def upload_recording(session_id: str, file: UploadFile = File(...)):
     with open(file_path, "wb") as f:
         f.write(await file.read())
         
-    print(f"🎬 Recording saved for {session_id} at {file_path}")
+    print(f"Recording saved for {session_id} at {file_path}")
     
     return {
         "status": "success", 
@@ -354,10 +438,15 @@ def _ext(language: str) -> str:
         "kotlin": "kt", "php": "php", "bash": "sh",
     }.get(language.lower(), "txt")
 
-# Interviewer Agent websocket
 @app.websocket("/ws/interview/{session_id}")
-async def interview_websocket(websocket: WebSocket, session_id: str):
+async def interview_websocket(websocket: WebSocket, session_id: str, mode: str = Query("interview")):
     await websocket.accept()
+    print(f"\n{'='*40}")
+    print(f"NEW WEBSOCKET CONNECTION")
+    print(f"Session: {session_id}")
+    print(f"Mode Received: {mode.upper()}")
+    print(f"{'='*40}\n")
+
     if session_id not in SESSIONS:
         await websocket.send_text(json.dumps({"type": "error", "message": "Session not found"}))
         await websocket.close()
@@ -365,41 +454,110 @@ async def interview_websocket(websocket: WebSocket, session_id: str):
 
     session_data = SESSIONS[session_id]
     dg_agent_url = "wss://agent.deepgram.com/v1/agent/converse"
-    
-    selected_voice = session_data.get("voice_id", "aura-orpheus-en")
     turn_state = {"rag_called": False}
 
     rag_tool = {
         "name": "search_knowledge_base",
-        "description": "Retrieves content from the candidate CV and Job Description. CRITICAL: Call this tool exactly ONCE per turn. Do not call in parallel or sequentially.",
+        "description": "Searches the candidate CV, Job Description, and Interview Transcript. Call this tool exactly ONCE per turn to find specific details.",
         "parameters": {
             "type": "object",
             "properties": {
                 "query": {
                     "type": "string",
-                    "description": "Specific query about the candidate background or role requirements."
+                    "description": "The search query to look up details."
                 }
             },
             "required": ["query"]
         }
     }
 
-    if USE_OPENAI:
+    if mode == "coaching":
+        print("BOOTING COACHING PERSONA...")
+        
+        past_transcript_lines = [f"{msg['role'].upper()}: {msg['content']}" for msg in session_data.get("history", [])]
+        past_transcript = "\n".join(past_transcript_lines) if past_transcript_lines else "No audio transcribed."
+
+        if "transcript_retriever" not in session_data and past_transcript.strip() and past_transcript != "No audio transcribed.":
+            print("Building Transcript RAG Vectorstore...")
+            try:
+                embeddings = GoogleGenerativeAIEmbeddings(model=EMBEDDING_MODEL, google_api_key=GEMINI_API_KEY)
+                semantic_chunker = SemanticChunker(embeddings, breakpoint_threshold_type="percentile")
+                transcript_docs = semantic_chunker.create_documents([f"INTERVIEW TRANSCRIPT:\n{past_transcript}"])
+                
+                if transcript_docs:
+                    transcript_vectorstore = LangchainFAISS.from_documents(transcript_docs, embeddings)
+                    session_data["transcript_retriever"] = transcript_vectorstore.as_retriever(search_type="mmr", search_kwargs={'k': 3, 'fetch_k': 8})
+            except Exception as e:
+                print(f"Failed to build transcript RAG: {e}")
+
+        session_data["history"] = []
+
+        feedback = session_data.get("last_feedback", {})
+        b_rep = feedback.get("behavioral_report", {})
+        t_rep = feedback.get("technical_report", {})
+        
+        b_top = b_rep.get("top_section", {})
+        t_top = t_rep.get("top_section", {})
+        b_det = b_rep.get("detailed_analysis", {})
+        t_det = t_rep.get("detailed_analysis", {})
+        
+        b_strengths = b_det.get('strengths') or []
+        b_weaknesses = b_det.get('weaknesses') or []
+        t_strengths = t_det.get('strengths') or []
+        t_weaknesses = t_det.get('weaknesses') or []
+        
+        raw_feedback_string = f"""
+        Behavioral Performance:
+        Score: {b_top.get('behavioral_score', 'Not Available')} out of 10
+        Summary: {b_top.get('overall_summary', 'Not Available')}
+        Strengths: {', '.join(b_strengths) if b_strengths else 'None'}
+        Areas to Improve: {', '.join(b_weaknesses) if b_weaknesses else 'None'}
+
+        Technical Performance:
+        Score: {t_top.get('technical_score', 'Not Available')} out of 10
+        Summary: {t_top.get('overall_summary', 'Not Available')}
+        Strengths: {', '.join(t_strengths) if t_strengths else 'None'}
+        Areas to Improve: {', '.join(t_weaknesses) if t_weaknesses else 'None'}
+        """
+        
+        clean_feedback = raw_feedback_string.replace('*', '').replace('#', '').replace('_', '')
+
+        coaching_context = f"""
+        {COACHING_SYSTEM_PROMPT}
+        
+        AI FEEDBACK REPORT TO DISCUSS:
+        {clean_feedback}
+        """
+        
+        selected_voice = "aura-orion-en"
+        
         think_config = {
-            "provider": {"type": "open_ai", "model": "gpt-4o"},
-            "prompt": INTERVIEW_SYSTEM_PROMPT,
+            "provider": {"type": "groq", "model": GROQ_CHAT_MODEL} if not USE_OPENAI else {"type": "open_ai", "model": "gpt-4o"},
+            "prompt": coaching_context,
             "functions": [rag_tool]
         }
-    else:
-        think_config = {
-            "provider": {"type": "groq", "model": GROQ_CHAT_MODEL},
-            "endpoint": {
+        if not USE_OPENAI:
+            think_config["endpoint"] = {
                 "url": "https://api.groq.com/openai/v1/chat/completions",
                 "headers": {"Authorization": f"Bearer {GROQ_API_KEY}"}
-            },
+            }
+        starting_message = "Hey man! I'm your career coach. I've got your feedback scores right here, and you did a solid job. Where would you like to start? We can dive into specific answers or talk about your overall strategy."
+    
+    else:
+        print("BOOTING INTERVIEW PERSONA...")
+        selected_voice = session_data.get("voice_id", "aura-orpheus-en")
+        
+        think_config = {
+            "provider": {"type": "groq", "model": GROQ_CHAT_MODEL} if not USE_OPENAI else {"type": "open_ai", "model": "gpt-4o"},
             "prompt": INTERVIEW_SYSTEM_PROMPT,
             "functions": [rag_tool]
         }
+        if not USE_OPENAI:
+            think_config["endpoint"] = {
+                "url": "https://api.groq.com/openai/v1/chat/completions",
+                "headers": {"Authorization": f"Bearer {GROQ_API_KEY}"}
+            }
+        starting_message = "Hi. I'll be your interviewer today. First of all, tell me about yourself and your background."
 
     agent_config = {
         "type": "Settings",
@@ -423,7 +581,7 @@ async def interview_websocket(websocket: WebSocket, session_id: str):
             await dg_agent.send(json.dumps(agent_config))
             await dg_agent.send(json.dumps({
                 "type": "InjectAgentMessage",
-                "content": "Hi. I'll be your interviewer today. First of all, tell me about yourself and your background."
+                "content": starting_message
             }))
 
             async def receive_from_deepgram():
@@ -531,7 +689,6 @@ async def interview_websocket(websocket: WebSocket, session_id: str):
 tts_voice = PiperVoice.load("./models/en_US-kristin-medium.onnx", config_path="./models/en_US-kristin-medium.onnx.json")
 stt_model = WhisperModel("base.en", device="cpu", compute_type="int8")
 
-# Dual Agent Feedback Endpoint
 @app.post("/get_feedback")
 async def get_feedback(request: FeedbackRequest):
     session_id = request.session_id
@@ -540,7 +697,6 @@ async def get_feedback(request: FeedbackRequest):
     
     history_str = "\n".join([f"- {msg['role'].upper()}: {msg['content']}" for msg in session_data["history"]])
     
-    # Api data transfer (no files, just JSON)
     if request.mer_data and len(request.mer_data) > 0:
         mer_text_lines = []
         for answer in request.mer_data:
@@ -569,22 +725,24 @@ async def get_feedback(request: FeedbackRequest):
         return json.loads(completion.choices[0].message.content)
 
     try:
-        # run both agents in parallel
         behavioral_task = call_llm(BEHAVIORAL_SYSTEM_PROMPT, behavioral_prompt)
         technical_task = call_llm(TECHNICAL_SYSTEM_PROMPT, technical_prompt)
         
         behavioral_result, technical_result = await asyncio.gather(behavioral_task, technical_task)
         
-        # Calc overall score
-        b_score = float(behavioral_result.get("behavioral_score", 5.0))
-        t_score = float(technical_result.get("technical_score", 5.0))
+        b_score = float(behavioral_result.get("top_section", {}).get("behavioral_score", 5.0))
+        t_score = float(technical_result.get("top_section", {}).get("technical_score", 5.0))
         overall_score = round((b_score + t_score) / 2, 1)
 
-        return {
+        final_report = {
             "overall_score": overall_score,
             "behavioral_report": behavioral_result,
             "technical_report": technical_result
         }
+
+        SESSIONS[session_id]["last_feedback"] = final_report
+
+        return final_report
         
     except Exception as e:
         print(f"Dual-Agent Feedback Error: {str(e)}")
