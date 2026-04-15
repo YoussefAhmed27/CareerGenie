@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom'; 
-import { startSession, uploadCvPdf } from '../api/interviewService';
+import { startSession, uploadCvPdf, getExistingCv } from '../api/interviewService';
 import { AVATAR_PROFILES } from './Avatar';
 import Navbar from '../../components/Navbar/Navbar'; 
 import '../interview-styles.css'; 
@@ -48,6 +48,22 @@ export default function Setup() {
       setUploadedFileName(result.filename);
     } catch (err) {
       setError(err.message); setUploadedFileName(''); setUploadedCvText('');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleUseExistingCv = async () => {
+    setIsUploading(true);
+    setError('');
+    try {
+      const { blob, filename } = await getExistingCv();
+      const existingFile = new File([blob], filename, { type: "application/pdf" });
+      const result = await uploadCvPdf(existingFile);
+      setUploadedCvText(result.cv_text);
+      setUploadedFileName(filename);
+    } catch (err) {
+      setError(err.message);
     } finally {
       setIsUploading(false);
     }
@@ -155,7 +171,6 @@ export default function Setup() {
       <div className="ai-theme-wrapper min-h-screen pt-28 pb-12 relative">
         <div className="setup-page-content max-w-5xl mx-auto flex flex-col w-full">
           
-          {/* --- REFINED STEPPER --- */}
           <div className="stepper-container" style={{ marginBottom: '2rem' }}>
             <span className={`stepper-item ${step >= 1 ? 'active' : ''}`}>1. Role & CV</span>
             <span className="stepper-separator">›</span>
@@ -186,9 +201,11 @@ export default function Setup() {
                           </div>
                           {uploadedFileName && <span className="file-name-success" title={uploadedFileName}>{uploadedFileName}</span>}
                         </div>
-                        <div className="cv-pod disabled">
+                        <div className={`cv-pod ${uploadedFileName ? 'success' : ''} ${isUploading ? 'loading' : ''}`} onClick={handleUseExistingCv}>
                           <span className="cv-pod-label">USE EXISTING CV</span>
-                          <div className="cv-pod-circle"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></div>
+                          <div className="cv-pod-circle">
+                            {isUploading ? <div className="spinner-minimal"></div> : <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>}
+                          </div>
                         </div>
                         <input type="file" ref={fileInputRef} onChange={handleFileUpload} style={{ display: 'none' }} accept=".pdf" />
                       </div>
@@ -216,7 +233,6 @@ export default function Setup() {
               </div>
             )}
 
-            {/* STEP 2: FIXED-SIZE 3-ORB SELECTION */}
             {step === 2 && (
               <div className="avatar-selection-step">
                 <h2 className="gradient-text-header">Select Interview Mode</h2>
@@ -228,7 +244,7 @@ export default function Setup() {
                     flex-direction: column;
                     align-items: center;
                     width: 100%;
-                    height: 380px; /* Fixed height to match Step 1/3 */
+                    height: 380px; 
                     justify-content: flex-start;
                     margin-top: 40px;
                   }
@@ -285,7 +301,6 @@ export default function Setup() {
                     box-shadow: 0 10px 30px rgba(212,34,235,0.3);
                   }
 
-                  /* Pure CSS Glowing Gradient Border for Active Circle */
                   .mode-circle-wrapper.active .mode-circle::before {
                     content: '';
                     position: absolute;
@@ -295,6 +310,7 @@ export default function Setup() {
                     background: linear-gradient(135deg, #00f2fe, #d422eb);
                     -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
                     -webkit-mask-composite: xor;
+                    -webkit-mask-composite: exclude;
                     mask-composite: exclude;
                     pointer-events: none;
                   }
@@ -311,11 +327,10 @@ export default function Setup() {
                     text-shadow: 0 0 10px rgba(0,242,254,0.5);
                   }
 
-                  /* Fixed Description Box */
                   .mode-description-box {
                     width: 100%;
                     max-width: 600px;
-                    height: 100px; /* Fixed text container */
+                    height: 100px; 
                     background: rgba(17, 20, 29, 0.6);
                     border: 1px solid rgba(255,255,255,0.08);
                     border-radius: 16px;
@@ -344,7 +359,6 @@ export default function Setup() {
                 <div className="mode-selector-container">
                   
                   <div className="circles-row">
-                    {/* Behavioral */}
                     <div 
                       className={`mode-circle-wrapper ${interviewMode === 'behavioral' ? 'active' : 'inactive'}`} 
                       onClick={() => setInterviewMode('behavioral')}
@@ -355,7 +369,6 @@ export default function Setup() {
                       <span className="mode-circle-title">Behavioral</span>
                     </div>
 
-                    {/* Technical */}
                     <div 
                       className={`mode-circle-wrapper ${interviewMode === 'technical' ? 'active' : 'inactive'}`} 
                       onClick={() => setInterviewMode('technical')}
@@ -366,7 +379,6 @@ export default function Setup() {
                       <span className="mode-circle-title">Technical</span>
                     </div>
 
-                    {/* Comprehensive */}
                     <div 
                       className={`mode-circle-wrapper ${interviewMode === 'comprehensive' ? 'active' : 'inactive'}`} 
                       onClick={() => setInterviewMode('comprehensive')}
@@ -378,7 +390,6 @@ export default function Setup() {
                     </div>
                   </div>
 
-                  {/* Dynamic Content Box */}
                   <div className="mode-description-box">
                     {interviewMode === 'behavioral' && (
                       <p key="desc-1" className="mode-desc-text">Evaluates your soft skills, cultural fit, past experiences, situational awareness and job alignment</p>
@@ -405,7 +416,6 @@ export default function Setup() {
               </div>
             )}
 
-            {/* STEP 3: AVATAR SELECTION */}
             {step === 3 && (
               <div className="avatar-selection-step">
                 <h2 className="gradient-text-header">Choose Your Interviewer</h2>
@@ -463,7 +473,6 @@ export default function Setup() {
               </div>
             )}
 
-            {/* STEP 4: DEVICE CHECK */}
             {step === 4 && (
               <div className="device-check-step">
                 <h2 className="gradient-text-header">Hardware Check</h2>
@@ -495,7 +504,7 @@ export default function Setup() {
                         <div className="status-text"><span className="status-title">Camera</span><span className="status-sub">{hasPermissions ? 'Connected' : 'Waiting for browser...'}</span></div>
                       </div>
                       <div className={`status-item ${hasPermissions ? 'ready' : 'pending'}`}>
-                        <div className="status-icon-box"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></div>
+                        <div className="status-icon-box"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></div>
                         <div className="status-text"><span className="status-title">Microphone</span><span className="status-sub">{hasPermissions ? 'Input Detected' : 'Waiting for browser...'}</span></div>
                       </div>
                     </div>

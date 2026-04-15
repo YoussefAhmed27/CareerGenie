@@ -7,6 +7,30 @@ const API_CLIENT = axios.create({
   },
 });
 
+const AUTH_API_CLIENT = axios.create({
+  baseURL: 'http://localhost:5000/api',
+});
+
+export const getExistingCv = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await AUTH_API_CLIENT.get('/profile/cv', {
+      headers: { Authorization: `Bearer ${token}` },
+      responseType: 'blob'
+    });
+    
+    const contentDisposition = response.headers['content-disposition'];
+    let filename = 'my_cv.pdf';
+    if (contentDisposition && contentDisposition.includes('filename=')) {
+      filename = contentDisposition.split('filename=')[1].replace(/"/g, '');
+    }
+
+    return { blob: response.data, filename };
+  } catch (error) {
+    throw new Error('No existing CV found on your profile.');
+  }
+};
+
 export const uploadCvPdf = async (file) => {
   try {
     const formData = new FormData();
