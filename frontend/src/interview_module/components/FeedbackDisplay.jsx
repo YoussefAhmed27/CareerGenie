@@ -462,7 +462,8 @@ export default function FeedbackDisplay({ data, sessionId }) {
   // Data mapping
   const bReport = behavioral_report || {};
   const tReport = technical_report || {};
-  const header = bReport.header || {};
+  const header = bReport.header || tReport.header || {};
+  
   const bTop = bReport.top_section || {};
   const tTop = tReport.top_section || {};
   const bMetrics = bReport.visual_metrics || {};
@@ -542,7 +543,6 @@ export default function FeedbackDisplay({ data, sessionId }) {
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative', zIndex: 1 }}>
           <ScoreOrb score={overall_score || 0} />
           
-          {/* ADDED: Start Coaching Session Button */}
           <button 
             onClick={handleStartCoaching} 
             style={{
@@ -575,123 +575,127 @@ export default function FeedbackDisplay({ data, sessionId }) {
       {/* =========================================
           SCREEN 2: TECHNICAL EVALUATION
       ========================================= */}
-      <section className="snap-screen screen-block">
+      {technical_report && (
+        <section className="snap-screen screen-block">
 
-        {/* Header: Title/Text on Left, Vertical Score/Exit on Right */}
-        <div className="screen-header" style={{ zIndex: 1, position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <div style={{ flex: 1, paddingRight: '60px' }}>
-            <h1 className="screen-title">Technical Evaluation</h1>
-            <p className="screen-summary" style={{ maxWidth: '100%' }}>{tTop.overall_summary}</p>
-          </div>
-          
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '20px' }}>
-            <button onClick={handleExitClick} className="btn-exit-small">EXIT DASHBOARD</button>
-            <MassiveDonut score={tTop.technical_score || 0} label="Tech Score" size={160} />
-          </div>
-        </div>
-
-        {/* Top Half: 2 Columns - Sphere | Metrics */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '50px', paddingBottom: '50px', zIndex: 1, position: 'relative' }}>
-          <div style={{ background: '#11141d', padding: '40px', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-            <h3 style={{ color: '#a0aab2', letterSpacing: '3px', marginBottom: '20px', fontSize: '13px', fontWeight: '800' }}>SKILL CONSTELLATION</h3>
-            <SkillsSphere skills={sphereSkills} />
-          </div>
-
-          <div style={{ background: '#11141d', padding: '50px', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <h3 style={{ color: '#a0aab2', letterSpacing: '3px', marginBottom: '40px', fontSize: '13px', fontWeight: '800', textAlign: 'center' }}>CORE COMPETENCIES</h3>
-            <MetricBarAnimated label="Relevance to Question" score={tMetrics.relevance_to_question || 0} />
-            <MetricBarAnimated label="Job Alignment" score={tMetrics.job_alignment || 0} />
-            <MetricBarAnimated label="Answer Structure" score={tMetrics.answer_structure || 0} />
-            <MetricBarAnimated label="Tech Jargon Accuracy" score={tMetrics.technical_jargon_accuracy || 0} />
-            <MetricBarAnimated label="Problem Solving Logic" score={tMetrics.problem_solving_logic || 0} />
-          </div>
-        </div>
-
-
-        {/* Bottom Half: Full Width Text Insights */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '40px', paddingBottom: '80px', zIndex: 1, position: 'relative' }}>
-          <div>
-            <h3 className="section-subtitle" style={{ color: CYAN }}>VERIFIED STRENGTHS</h3>
-            <InsightList items={tDetails.strengths} type="strength" />
-          </div>
-          <div>
-            <h3 className="section-subtitle" style={{ color: '#ff0844' }}>KNOWLEDGE GAPS</h3>
-            <InsightList items={tDetails.weaknesses} type="weakness" />
-          </div>
-          <div>
-            <h3 className="section-subtitle" style={{ color: MAGENTA }}>RECOMMENDED UPGRADES</h3>
-            <InsightList items={tDetails.improvement_tips} type="tip" />
-          </div>
-
-          {tDetails.code_review && tDetails.code_review !== "null" && (
-            <div style={{ background: 'rgba(0,242,254,0.05)', borderLeft: `4px solid ${CYAN}`, padding: '40px', borderRadius: '0 20px 20px 0', marginTop: '20px' }}>
-              <h3 className="section-subtitle" style={{ color: CYAN, marginBottom: '20px' }}>TERMINAL CODE REVIEW</h3>
-              <p style={{ margin: 0, color: '#fff', fontSize: '16px', lineHeight: '1.8', fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>{tDetails.code_review}</p>
+          {/* Header: Title/Text on Left, Vertical Score/Exit on Right */}
+          <div className="screen-header" style={{ zIndex: 1, position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div style={{ flex: 1, paddingRight: '60px' }}>
+              <h1 className="screen-title">Technical Evaluation</h1>
+              <p className="screen-summary" style={{ maxWidth: '100%' }}>{tTop.overall_summary}</p>
             </div>
-          )}
-        </div>
-      </section>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '20px' }}>
+              <button onClick={handleExitClick} className="btn-exit-small">EXIT DASHBOARD</button>
+              <MassiveDonut score={tTop.technical_score || 0} label="Tech Score" size={160} />
+            </div>
+          </div>
+
+          {/* Top Half: 2 Columns - Sphere | Metrics */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '50px', paddingBottom: '50px', zIndex: 1, position: 'relative' }}>
+            <div style={{ background: '#11141d', padding: '40px', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+              <h3 style={{ color: '#a0aab2', letterSpacing: '3px', marginBottom: '20px', fontSize: '13px', fontWeight: '800' }}>SKILL CONSTELLATION</h3>
+              <SkillsSphere skills={sphereSkills} />
+            </div>
+
+            <div style={{ background: '#11141d', padding: '50px', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              <h3 style={{ color: '#a0aab2', letterSpacing: '3px', marginBottom: '40px', fontSize: '13px', fontWeight: '800', textAlign: 'center' }}>CORE COMPETENCIES</h3>
+              <MetricBarAnimated label="Relevance to Question" score={tMetrics.relevance_to_question || 0} />
+              <MetricBarAnimated label="Job Alignment" score={tMetrics.job_alignment || 0} />
+              <MetricBarAnimated label="Answer Structure" score={tMetrics.answer_structure || 0} />
+              <MetricBarAnimated label="Tech Jargon Accuracy" score={tMetrics.technical_jargon_accuracy || 0} />
+              <MetricBarAnimated label="Problem Solving Logic" score={tMetrics.problem_solving_logic || 0} />
+            </div>
+          </div>
+
+
+          {/* Bottom Half: Full Width Text Insights */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '40px', paddingBottom: '80px', zIndex: 1, position: 'relative' }}>
+            <div>
+              <h3 className="section-subtitle" style={{ color: CYAN }}>VERIFIED STRENGTHS</h3>
+              <InsightList items={tDetails.strengths} type="strength" />
+            </div>
+            <div>
+              <h3 className="section-subtitle" style={{ color: '#ff0844' }}>KNOWLEDGE GAPS</h3>
+              <InsightList items={tDetails.weaknesses} type="weakness" />
+            </div>
+            <div>
+              <h3 className="section-subtitle" style={{ color: MAGENTA }}>IMPROVEMENT TIPS</h3>
+              <InsightList items={tDetails.improvement_tips} type="tip" />
+            </div>
+
+            {tDetails.code_review && tDetails.code_review !== "null" && (
+              <div style={{ background: 'rgba(0,242,254,0.05)', borderLeft: `4px solid ${CYAN}`, padding: '40px', borderRadius: '0 20px 20px 0', marginTop: '20px' }}>
+                <h3 className="section-subtitle" style={{ color: CYAN, marginBottom: '20px' }}>TERMINAL CODE REVIEW</h3>
+                <p style={{ margin: 0, color: '#fff', fontSize: '16px', lineHeight: '1.8', fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>{tDetails.code_review}</p>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* =========================================
           SCREEN 3: BEHAVIORAL EVALUATION
       ========================================= */}
-      <section className="snap-screen screen-block">
-        
-        {/* Header: Title/Text on Left, Vertical Score/Exit on Right */}
-        <div className="screen-header" style={{ zIndex: 1, position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <div style={{ flex: 1, paddingRight: '60px' }}>
-            <h1 className="screen-title">Behavioral & Communication</h1>
-            <p className="screen-summary" style={{ maxWidth: '100%' }}>{bTop.overall_summary}</p>
-          </div>
+      {behavioral_report && (
+        <section className="snap-screen screen-block">
           
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '20px' }}>
-            <button onClick={handleExitClick} className="btn-exit-small">EXIT DASHBOARD</button>
-            <MassiveDonut score={bTop.behavioral_score || 0} label="Behavior Score" size={160} />
-          </div>
-        </div>
-
-        {/* Top Half: 2 Columns - Radar | Donuts + Bars */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '50px', paddingBottom: '50px', zIndex: 1, position: 'relative' }}>
-          
-          <div style={{ background: '#11141d', padding: '40px', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-            <h3 style={{ color: '#a0aab2', letterSpacing: '3px', marginBottom: '30px', fontSize: '13px', fontWeight: '800' }}>PSYCHOMETRIC RADAR</h3>
-            {traitMetrics.openness && <GlowingRadarChart traits={traitMetrics} />}
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '40px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-around', background: '#11141d', padding: '40px', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.05)' }}>
-              <MiniDonut score={traitMetrics.confidence || 0} label="Confidence" size={120} />
-              <MiniDonut score={traitMetrics.engagement || 0} label="Engagement" size={120} />
-              <MiniDonut score={traitMetrics.nervousness || 0} label="Nervousness" size={120} />
+          {/* Header: Title/Text on Left, Vertical Score/Exit on Right */}
+          <div className="screen-header" style={{ zIndex: 1, position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div style={{ flex: 1, paddingRight: '60px' }}>
+              <h1 className="screen-title">Behavioral & Communication</h1>
+              <p className="screen-summary" style={{ maxWidth: '100%' }}>{bTop.overall_summary}</p>
             </div>
             
-            <div style={{ background: '#11141d', padding: '50px', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.05)', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-              <h3 style={{ color: '#a0aab2', letterSpacing: '3px', marginBottom: '30px', fontSize: '13px', fontWeight: '800', textAlign: 'center' }}>SPEECH DYNAMICS</h3>
-              <MetricBarAnimated label="Fluency" score={commMetrics.fluency || 0} />
-              <MetricBarAnimated label="Pacing" score={commMetrics.pacing || 0} />
-              <MetricBarAnimated label="Tone Expressiveness" score={commMetrics.tone_expressiveness || 0} />
-              <MetricBarAnimated label="Pause Control" score={commMetrics.pause_control || 0} />
-              <MetricBarAnimated label="Filler Words" score={10 - commMetrics.filler_word_usage || 0} />
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '20px' }}>
+              <button onClick={handleExitClick} className="btn-exit-small">EXIT DASHBOARD</button>
+              <MassiveDonut score={bTop.behavioral_score || 0} label="Behavior Score" size={160} />
             </div>
           </div>
-        </div>
 
-        {/* Bottom Half: Full Width Text Insights */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '40px', paddingBottom: '80px', zIndex: 1, position: 'relative' }}>
-          <div>
-            <h3 className="section-subtitle" style={{ color: CYAN }}>COMMUNICATION STRENGTHS</h3>
-            <InsightList items={bDetails.strengths} type="strength" />
+          {/* Top Half: 2 Columns - Radar | Donuts + Bars */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '50px', paddingBottom: '50px', zIndex: 1, position: 'relative' }}>
+            
+            <div style={{ background: '#11141d', padding: '40px', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+              <h3 style={{ color: '#a0aab2', letterSpacing: '3px', marginBottom: '30px', fontSize: '13px', fontWeight: '800' }}>PSYCHOMETRIC TRAITS</h3>
+              {traitMetrics.openness && <GlowingRadarChart traits={traitMetrics} />}
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '40px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-around', background: '#11141d', padding: '40px', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <MiniDonut score={traitMetrics.confidence || 0} label="Confidence" size={120} />
+                <MiniDonut score={traitMetrics.engagement || 0} label="Engagement" size={120} />
+                <MiniDonut score={traitMetrics.nervousness || 0} label="Nervousness" size={120} />
+              </div>
+              
+              <div style={{ background: '#11141d', padding: '50px', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.05)', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <h3 style={{ color: '#a0aab2', letterSpacing: '3px', marginBottom: '30px', fontSize: '13px', fontWeight: '800', textAlign: 'center' }}>SPEECH DYNAMICS</h3>
+                <MetricBarAnimated label="Fluency" score={commMetrics.fluency || 0} />
+                <MetricBarAnimated label="Pacing" score={commMetrics.pacing || 0} />
+                <MetricBarAnimated label="Tone Expressiveness" score={commMetrics.tone_expressiveness || 0} />
+                <MetricBarAnimated label="Pause Control" score={commMetrics.pause_control || 0} />
+                <MetricBarAnimated label="Filler Words" score={10 - commMetrics.filler_word_usage || 0} />
+              </div>
+            </div>
           </div>
-          <div>
-            <h3 className="section-subtitle" style={{ color: '#ff0844' }}>DELIVERY FRICTION</h3>
-            <InsightList items={bDetails.weaknesses} type="weakness" />
+
+          {/* Bottom Half: Full Width Text Insights */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '40px', paddingBottom: '80px', zIndex: 1, position: 'relative' }}>
+            <div>
+              <h3 className="section-subtitle" style={{ color: CYAN }}>COMMUNICATION STRENGTHS</h3>
+              <InsightList items={bDetails.strengths} type="strength" />
+            </div>
+            <div>
+              <h3 className="section-subtitle" style={{ color: '#ff0844' }}>DELIVERY WEAKNESSES</h3>
+              <InsightList items={bDetails.weaknesses} type="weakness" />
+            </div>
+            <div>
+              <h3 className="section-subtitle" style={{ color: MAGENTA }}>IMPROVEMENT TIPS</h3>
+              <InsightList items={bDetails.improvement_tips} type="tip" />
+            </div>
           </div>
-          <div>
-            <h3 className="section-subtitle" style={{ color: MAGENTA }}>EXECUTIVE PRESENCE COACHING</h3>
-            <InsightList items={bDetails.improvement_tips} type="tip" />
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* --- STRUCTURAL CSS SHIELD & ANIMATIONS --- */}
       <style>{`

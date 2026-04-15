@@ -9,6 +9,8 @@ const Navbar = () => {
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false); 
   const [profileOpen, setProfileOpen] = useState(false); 
+ 
+  const [activeItem, setActiveItem] = useState("Home"); 
 
   const token = localStorage.getItem('token');
   const userName = localStorage.getItem('user_name') || "Candidate";
@@ -41,25 +43,22 @@ const Navbar = () => {
     }
   };
 
-  // smart routing
-  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, link: string) => {
+  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, link: string, title: string) => {
     e.preventDefault();
     setIsOpen(false); 
+    setActiveItem(title); // Update the active link visually
 
     if (link.startsWith('#')) {
       const targetId = link.substring(1);
       if (location.pathname !== '/') {
-        // If we are on /interview/setup, go Home first, then scroll
         navigate('/');
         setTimeout(() => {
           document.getElementById(targetId)?.scrollIntoView({ behavior: 'smooth' });
         }, 100);
       } else {
-        // If we are already Home, just scroll smoothly
         document.getElementById(targetId)?.scrollIntoView({ behavior: 'smooth' });
       }
     } else {
-      // If it's a normal URL link, just navigate
       navigate(link);
     }
   };
@@ -67,22 +66,24 @@ const Navbar = () => {
   return (
     <nav className="fixed top-0 left-0 w-full z-50">
       <div className="relative z-50 border-b border-white/10 rounded-b-3xl bg-[#11152D]/90 backdrop-blur-md shadow-lg">
-        <div className="container mx-auto flex items-center justify-between py-1 px-6">
+        <div className="container mx-auto flex items-center justify-between h-20 px-6">
           
           <div className="flex-1 flex justify-start items-center cursor-pointer" onClick={() => navigate("/")}>
-            <img src="/logo.svg" alt="careerGenie logo" className="w-40 sm:w-48 -mt-3" />
+            <img src="/logo.png" alt="careerGenie logo" className="w-40 sm:w-48" />
           </div>
 
           <div className="hidden lg:flex shrink-0 justify-center">
-            <ul className="flex items-center gap-8 text-[18px] text-gray-300">
+            <ul className="flex items-center gap-12 text-[18px] text-gray-300">
               {NavbarMenu.map((item) => (
                 <li key={item.id}>
-                  {/* ── UPDATED DESKTOP LINKS ── */}
                   <a 
                     href={item.link} 
-                    onClick={(e) => handleNavClick(e, item.link)}
-                    className={`text-white inline-block hover:text-white transition-colors cursor-pointer ${
-                      item.title === 'Home' ? 'text-white font-medium' : ''
+                    onClick={(e) => handleNavClick(e, item.link, item.title)}
+                    
+                    className={`inline-block transition-colors cursor-pointer ${
+                      activeItem === item.title 
+                        ? 'text-white font-bold' 
+                        : 'text-gray-300 hover:text-white'
                     }`}
                   >
                     {item.title}
@@ -152,12 +153,13 @@ const Navbar = () => {
         <ul className="flex flex-col gap-6 text-lg text-gray-300">
           {NavbarMenu.map((item) => (
             <li key={item.id}>
-              {/* ── UPDATED MOBILE LINKS ── */}
               <a 
                 href={item.link} 
-                onClick={(e) => handleNavClick(e, item.link)}
-                className={`block hover:text-white transition-colors cursor-pointer ${
-                  item.title === 'Home' ? 'text-white font-medium' : ''
+                onClick={(e) => handleNavClick(e, item.link, item.title)}
+                className={`block transition-colors cursor-pointer ${
+                  activeItem === item.title 
+                    ? 'text-white font-bold' 
+                    : 'text-gray-300 hover:text-white'
                 }`}
               >
                 {item.title}

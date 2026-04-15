@@ -18,7 +18,7 @@ export default function Experience({ analyser, scheduledVisemes, audioCtx, onRea
   return (
     <div style={{ 
       width: '100%', height: '100%',
-      backgroundImage: 'url("https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&w=1920&q=80")',
+      backgroundImage: 'url(/office.png)',
       backgroundSize: 'cover', backgroundPosition: 'center',
       position: 'relative', overflow: 'hidden'
     }}>

@@ -7,14 +7,17 @@ const PROCTOR_INTERVAL = 500;
 
 export default function WebcamOverlay({ sessionId, onTerminate, isActive }) {
   const videoRef = useRef(null);
-  const canvasRef = useRef(null); 
   const wsRef = useRef(null);     
+  const onTerminateRef = useRef(onTerminate); 
 
-  const [status, setStatus] = useState("Initializing...");
   const [metrics, setMetrics] = useState({ confidence: 50, nervousness: 0, engagement: 50 });
   const [isModelLoaded, setIsModelLoaded] = useState(false);
   const [proctorAlerts, setProctorAlerts] = useState([]);
   const [isTerminated, setIsTerminated] = useState(false);
+
+  useEffect(() => {
+    onTerminateRef.current = onTerminate;
+  }, [onTerminate]);
 
   useEffect(() => {
     const init = async () => {
@@ -38,24 +41,26 @@ export default function WebcamOverlay({ sessionId, onTerminate, isActive }) {
             if (data.action === "TERMINATE") {
                 setIsTerminated(true);
                 setProctorAlerts([{ type: `TERMINATED: ${data.reason}` }]);
-                if (onTerminate) onTerminate(data.reason); 
+                if (onTerminateRef.current) onTerminateRef.current(data.reason); 
             } else if (data.action === "WARN") {
                 setProctorAlerts(data.events || []);
             }
         };
 
         setIsModelLoaded(true);
-        setStatus("ACTIVE");
       } catch (e) { 
-        setStatus("CAMERA ERROR"); 
+        console.error("CAMERA ERROR", e);
       }
     };
     init();
 
     return () => {
         if (wsRef.current) wsRef.current.close();
+        if (videoRef.current && videoRef.current.srcObject) {
+            videoRef.current.srcObject.getTracks().forEach(track => track.stop());
+        }
     };
-  }, [sessionId, onTerminate]);
+  }, [sessionId]); 
 
   useEffect(() => {
     if (!isModelLoaded || isTerminated) return;
@@ -100,19 +105,21 @@ export default function WebcamOverlay({ sessionId, onTerminate, isActive }) {
   useEffect(() => {
     if (!isModelLoaded || isTerminated || !isActive) return;
 
+    const memoryCanvas = document.createElement('canvas');
+    const ctx = memoryCanvas.getContext('2d');
     let proctorInterval;
+
     const timeout = setTimeout(() => {
         proctorInterval = setInterval(() => {
-            if (wsRef.current?.readyState === WebSocket.OPEN && videoRef.current && canvasRef.current) {
+            if (wsRef.current?.readyState === WebSocket.OPEN && videoRef.current) {
                 const video = videoRef.current;
-                const canvas = canvasRef.current;
-                const ctx = canvas.getContext('2d');
+                if (video.videoWidth === 0 || video.videoHeight === 0) return;
                 
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                memoryCanvas.width = video.videoWidth;
+                memoryCanvas.height = video.videoHeight;
                 
-                const base64Image = canvas.toDataURL('image/jpeg', 0.5);
+                ctx.drawImage(video, 0, 0, memoryCanvas.width, memoryCanvas.height);
+                const base64Image = memoryCanvas.toDataURL('image/jpeg', 0.5);
                 wsRef.current.send(base64Image);
             }
         }, PROCTOR_INTERVAL);
@@ -126,16 +133,9 @@ export default function WebcamOverlay({ sessionId, onTerminate, isActive }) {
 
   return (
     <div style={styles.container}>
-      <canvas ref={canvasRef} style={{ display: 'none' }} />
       <div style={styles.videoWrapper}>
          <video ref={videoRef} muted playsInline style={styles.video} />
          
-         <div style={styles.statusOverlay}>
-            <span style={{color: metrics.confidence > 0 ? '#10b981' : '#6b7280'}}>
-                {isTerminated ? "● OFFLINE" : (status === "ACTIVE" ? (isActive ? "● REAL-TIME AI" : "● WAITING FOR AVATAR...") : status)}
-            </span>
-         </div>
-
          {proctorAlerts.length > 0 && (
             <div style={{...styles.alertBanner, background: isTerminated ? '#7f1d1d' : 'rgba(239, 68, 68, 0.9)'}}>
                 ⚠️ {proctorAlerts[0].type ? proctorAlerts[0].type.toUpperCase() : proctorAlerts[0].toUpperCase()}
@@ -143,9 +143,9 @@ export default function WebcamOverlay({ sessionId, onTerminate, isActive }) {
          )}
       </div>
       <div style={{display:'flex', flexDirection:'column', gap:'12px'}}>
-         <MetricRow label="CONFIDENCE" val={metrics.confidence} color="#10b981" />
-         <MetricRow label="NERVOUSNESS" val={metrics.nervousness} color="#ef4444" />
-         <MetricRow label="ENGAGEMENT" val={metrics.engagement} color="#f59e0b" />
+         <MetricRow label="CONFIDENCE" val={metrics.confidence} gradient="linear-gradient(90deg, #0d9488 0%, #2dd4bf 100%)" glow="rgba(45, 212, 191, 0.4)" />
+         <MetricRow label="NERVOUSNESS" val={metrics.nervousness} gradient="linear-gradient(90deg, #be123c 0%, #fb7185 100%)" glow="rgba(251, 113, 133, 0.4)" />
+         <MetricRow label="ENGAGEMENT" val={metrics.engagement} gradient="linear-gradient(90deg, #b45309 0%, #fbbf24 100%)" glow="rgba(251, 191, 36, 0.4)" />
       </div>
     </div>
   );
@@ -153,25 +153,42 @@ export default function WebcamOverlay({ sessionId, onTerminate, isActive }) {
 
 function lerp(start, end, t) { return start * (1 - t) + end * t; }
 
+function MetricRow({label, val, gradient, glow}) {
+    return (
+        <div style={{display:'flex', alignItems:'center', fontSize:'11px', fontWeight:'600'}}>
+            <div style={{width:'85px', color:'#94a3b8', letterSpacing:'0.5px'}}>{label}</div>
+            
+            <div style={{flex:1, height:'8px', background:'rgba(0,0,0,0.4)', borderRadius:'4px', overflow:'hidden', border: '1px solid rgba(255,255,255,0.05)'}}>
+                <div style={{ 
+                    width: Math.min(100, val)+'%', 
+                    height:'100%', 
+                    background: gradient, 
+                    transition:'width 0.1s linear', 
+                    borderRadius:'4px',
+                    boxShadow: `0 0 8px ${glow}` 
+                }}/>
+            </div>
+            <div style={{width:'35px', textAlign:'right', color:'#ffffff'}}>{Math.round(val)}%</div>
+        </div>
+    )
+}
+
 const styles = {
   container: { 
     position: 'absolute', bottom: '20px', left: '20px', width: '320px', 
-    background: 'rgba(255, 255, 255, 0.9)', backdropFilter: 'blur(12px)',
-    border: '1px solid rgba(255, 255, 255, 0.5)', borderRadius: '16px', 
-    padding: '20px', color: '#1f2937', zIndex: 1000, 
-    fontFamily: 'system-ui, sans-serif', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)' 
+    background: 'rgba(17, 21, 45, 0.75)', 
+    backdropFilter: 'blur(24px) saturate(150%)', WebkitBackdropFilter: 'blur(24px)',
+    border: '1px solid rgba(255, 255, 255, 0.08)', 
+    borderRadius: '16px', 
+    padding: '20px', color: '#ffffff', zIndex: 1000, 
+    fontFamily: 'system-ui, sans-serif', boxShadow: '0 20px 40px rgba(0, 0, 0, 0.5)' 
   },
   videoWrapper: { 
-    width: '100%', height: '180px', background: '#e5e7eb', 
+    width: '100%', height: '180px', background: '#000000', 
     overflow: 'hidden', position: 'relative', borderRadius: '12px', 
-    marginBottom: '20px', border: '1px solid #d1d5db' 
+    marginBottom: '20px', border: '1px solid rgba(255, 255, 255, 0.05)'
   },
   video: { width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)' },
-  statusOverlay: { 
-    position: 'absolute', top: '10px', left: '10px', fontSize: '10px', fontWeight: '700', 
-    background: 'rgba(255, 255, 255, 0.95)', padding: '4px 10px', borderRadius: '20px', 
-    color: '#374151', boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
-  },
   alertBanner: {
     position: 'absolute', bottom: '0', left: '0', width: '100%',
     color: 'white', padding: '8px 0', textAlign: 'center', fontSize: '12px',
@@ -179,15 +196,3 @@ const styles = {
     animation: 'pulseAlert 1s infinite'
   }
 };
-
-function MetricRow({label, val, color}) {
-    return (
-        <div style={{display:'flex', alignItems:'center', fontSize:'11px', fontWeight:'600'}}>
-            <div style={{width:'85px', color:'#6b7280', letterSpacing:'0.5px'}}>{label}</div>
-            <div style={{flex:1, height:'8px', background:'#f3f4f6', borderRadius:'4px', overflow:'hidden'}}>
-                <div style={{ width: Math.min(100, val)+'%', height:'100%', background: color, transition:'width 0.1s linear', borderRadius:'4px' }}/>
-            </div>
-            <div style={{width:'35px', textAlign:'right', color:'#111827'}}>{Math.round(val)}%</div>
-        </div>
-    )
-}

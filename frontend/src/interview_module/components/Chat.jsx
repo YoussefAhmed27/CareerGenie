@@ -13,7 +13,6 @@ export default function Chat() {
   
   const navigate = useNavigate();
   
-  // Grab params from URL (specifically the mode)
   const [searchParams] = useSearchParams();
   const urlSessionId = searchParams.get('sessionId');
   const mode = searchParams.get('mode') || 'interview';
@@ -42,6 +41,9 @@ export default function Chat() {
 
   const [feedbackData, setFeedbackData]           = useState(null);
   const [isFeedbackLoading, setIsFeedbackLoading] = useState(false);
+  const [feedbackError, setFeedbackError]         = useState(null);
+  const hasTriggeredEndRef = useRef(false);
+
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
@@ -49,10 +51,10 @@ export default function Chat() {
   }, [messages]);
 
   useEffect(() => {
-    if (isInterviewComplete && !isFeedbackLoading && !feedbackData && !cheatReason) {
+    if (isInterviewComplete && !hasTriggeredEndRef.current && !cheatReason) {
       handleEndInterview();
     }
-  }, [isInterviewComplete, isFeedbackLoading, feedbackData, cheatReason]);
+  }, [isInterviewComplete, cheatReason]);
 
   const handleMicToggle = () => {
     if (isListening) stopListening();
@@ -60,6 +62,9 @@ export default function Chat() {
   };
 
   const handleEndInterview = async (reason = null) => {
+    if (hasTriggeredEndRef.current && !reason) return;
+    hasTriggeredEndRef.current = true;
+
     setIsInterviewComplete(true); 
     stopListening();
 
@@ -68,7 +73,6 @@ export default function Chat() {
       return; 
     }
 
-    // Terminate audio immediately and route home for Coaching Mode
     if (mode === 'coaching') {
         if (audioCtx && audioCtx.state === 'running') {
             audioCtx.suspend();
@@ -78,27 +82,32 @@ export default function Chat() {
     }
 
     setIsFeedbackLoading(true);
-    try {
-      const storedMerData = JSON.parse(localStorage.getItem(`mer_report_${sessionId}`) || "[]");
-      
-      const response = await fetch('http://127.0.0.1:8000/get_feedback', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-              session_id: sessionId,
-              mer_data: storedMerData
-          })
-      });
-      
-      if (!response.ok) throw new Error("Failed to fetch feedback");
-      
-      const data = await response.json();
-      setFeedbackData(data);
-    } catch (error) {
-      console.error("Feedback error:", error);
-    } finally {
-      setIsFeedbackLoading(false);
-    }
+    setFeedbackError(null);
+
+    setTimeout(async () => {
+      try {
+        const storedMerData = JSON.parse(localStorage.getItem(`mer_report_${sessionId}`) || "[]");
+        
+        const response = await fetch('http://127.0.0.1:8000/get_feedback', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                session_id: sessionId,
+                mer_data: storedMerData
+            })
+        });
+        
+        if (!response.ok) throw new Error(`Backend Error: ${response.status}`);
+        
+        const data = await response.json();
+        setFeedbackData(data);
+      } catch (error) {
+        console.error("Feedback error:", error);
+        setFeedbackError(error.message); 
+      } finally {
+        setIsFeedbackLoading(false);
+      }
+    }, 100); 
   };
 
   const handleCodeSubmit = (code, output, language) => {
@@ -201,13 +210,29 @@ export default function Chat() {
     );
   }
 
-  
-  // show loading screen while awaiting feedback
+  // Error Trap UI
+  if (feedbackError) {
+    return (
+      <div className="ai-theme-wrapper flex items-center justify-center h-screen text-white">
+         <div className="text-center bg-[#0B0F19] p-10 rounded-3xl border border-red-500/30 shadow-[0_0_30px_rgba(239,68,68,0.2)]">
+            <div className="w-16 h-16 mx-auto mb-6 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center">
+              <svg width="32" height="32" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            </div>
+            <h2 className="text-2xl font-bold mb-4 text-red-400">Analysis Failed</h2>
+            <p className="text-gray-400 mb-8 max-w-md mx-auto">The interview session data could not be processed. The server may have timed out while generating your comprehensive feedback report.</p>
+            <p className="text-xs text-red-400/50 mb-8 font-mono">{feedbackError}</p>
+            <button onClick={() => navigate('/')} className="px-8 py-3 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors font-semibold">
+              Return Home
+            </button>
+         </div>
+      </div>
+    );
+  }
+
   if (isFeedbackLoading || (feedbackData && !isVideoUploaded)) {
     return <AnalysisLoader />;
   }
 
-  // Once everything is totally done, show the actual report
   if (feedbackData && isVideoUploaded) {
     return <FeedbackDisplay data={feedbackData} sessionId={sessionId} />;
   }
@@ -216,11 +241,11 @@ export default function Chat() {
 
   const styles = {
     container: {
-      display: 'flex', width: '100%', height: 'calc(100vh - 80px)', marginTop: '80px', background: '#11172c',
+      display: 'flex', width: '100%', height: 'calc(100vh - 80px)', marginTop: '80px', background: '#050814', 
     },
     leftPanel: {
       flex: showSandbox ? '0 0 40%' : 1,
-      position: 'relative', background: '#000', overflow: 'hidden',
+      position: 'relative', background: 'transparent', overflow: 'hidden',
       transition: 'flex 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
     },
     centerControl: {
@@ -230,6 +255,7 @@ export default function Chat() {
     rightControl: {
       position: 'absolute', bottom: '30px', right: '30px', zIndex: 20,
     },
+    
     micButton: {
       width: '70px', height: '70px', borderRadius: '50%', border: 'none',
       background: isListening ? '#ef4444' : 'white',
@@ -248,24 +274,28 @@ export default function Chat() {
     sandboxPanel: {
       flex: showSandbox ? '0 0 35%' : '0 0 0%',
       overflow: 'hidden',
-      borderLeft: showSandbox ? '1px solid #30363d' : 'none',
-      borderRight: showSandbox ? '1px solid #30363d' : 'none',
+      borderLeft: showSandbox ? '1px solid rgba(255,255,255,0.05)' : 'none',
+      borderRight: showSandbox ? '1px solid rgba(255,255,255,0.05)' : 'none',
       transition: 'flex 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
-      background: '#0d1117',
+      background: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(20px)'
     },
     rightPanel: {
-      width: '400px', background: 'rgba(17, 23, 44, 0.95)',
-      borderLeft: '1px solid #333', display: 'flex', flexDirection: 'column',
+      width: '400px', 
+      background: 'rgba(15, 23, 42, 0.65)', /* Premium Dark Glass matching the Webcam */
+      backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', 
+      borderLeft: '1px solid rgba(255, 255, 255, 0.08)', 
+      display: 'flex', flexDirection: 'column',
       flexShrink: 0,
+      boxShadow: '-10px 0 30px rgba(0, 0, 0, 0.5)'
     },
-    header:   { padding: '20px', borderBottom: '1px solid #333', color: '#aaa', fontSize: '0.9rem', fontWeight: 'bold' },
+    header:   { padding: '20px', borderBottom: '1px solid rgba(255,255,255,0.05)', color: '#ffffff', fontSize: '0.85rem', fontWeight: 'bold', letterSpacing: '1px' },
     messages: { flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '15px' },
   };
 
   return (
     <div className="ai-theme-wrapper" style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
       
-      <div className="w-full bg-[#11152D] border-b border-white/10 h-20 flex items-center px-6 fixed top-0 left-0 z-50">
+      <div className="w-full bg-[rgba(17,21,45,0.4)] backdrop-blur-md border-b border-white/10 h-20 flex items-center px-6 fixed top-0 left-0 z-50">
         <img 
           src="/logo.svg" 
           alt="CareerGenie" 
@@ -293,7 +323,6 @@ export default function Chat() {
             />
           </div>
 
-          {/* ONLY render WebcamOverlay if NOT in coaching mode */}
           {mode !== 'coaching' && (
               <WebcamOverlay 
                 sessionId={sessionId}

@@ -125,7 +125,7 @@ const Login: React.FC = () => {
 
                 {/* Logo */}
                 <div className="mb-6 text-center shrink-0">
-                    <img src="/logo.svg" alt="logo" className="w-48 sm:w-60 mx-auto mb-2" />
+                    <img src="/logo.png" alt="logo" className="w-48 sm:w-60 mx-auto mb-2" />
                 </div>
 
                 {/* Tab Switcher */}

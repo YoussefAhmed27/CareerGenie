@@ -28,8 +28,11 @@ HEAD_PITCH_SOFT, HEAD_PITCH_HARD = 15.0, 30.0
 IRIS_RIGHT_DELTA, IRIS_LEFT_DELTA, IRIS_DOWN_DELTA = 0.05, -0.10, -0.05   
 
 # forgiveness thresholds
-SOFT_WARN_SECS, HARD_WARN_SECS, HIGH_SECS = 4.0, 3.0, 6.0 
-DEVICE_GRACE_PERIOD = 3.0 
+SOFT_WARN_SECS, HARD_WARN_SECS = 4.0, 3.0  
+HIGH_SECS = 10.0 
+
+DEVICE_WARN_SECS = 2.0  
+DEVICE_TERM_SECS = 6.0 
 
 LEFT_IRIS, LEFT_EYE, LEFT_EYE_TB       = [474, 475, 476, 477], [33,  133], [159, 145]
 RIGHT_IRIS, RIGHT_EYE, RIGHT_EYE_TB    = [469, 470, 471, 472], [362, 263], [386, 374]
@@ -137,17 +140,18 @@ class UnifiedProctoringEngine:
                     "bbox": box.xyxy[0].cpu().numpy().astype(int)
                 })
         
-        # Temporal Flag for Devices
+        # --- UPDATED 2-STAGE DEVICE LOGIC ---
         current_device_classes = {dev['class'] for dev in self._last_devices}
         for target_class in ["phone", "mobile_phone", "headphone", "earphone"]:
             is_present = target_class in current_device_classes
             dur = self._timer_update(f"device_{target_class}", is_present)
             
-            if is_present and dur >= DEVICE_GRACE_PERIOD:  
+            if is_present and dur >= DEVICE_WARN_SECS:  
+                sev = "HIGH" if dur >= DEVICE_TERM_SECS else "MEDIUM"
                 events.append({
                     "type": f"Unauthorized Device: {target_class.upper()}", 
                     "dur": dur, 
-                    "sev": "HIGH"
+                    "sev": sev
                 })
 
         # Gaze and Head Pose Analysis
