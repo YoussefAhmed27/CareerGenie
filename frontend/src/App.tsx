@@ -4,7 +4,11 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 // ── COMPONENTS ──
 import Login from "./components/Login";
 import Home from "./components/Home-page";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import HrDashboard from "./components/Hr-dashboard";
+import Profile from "./pages/Profile";
+
 // @ts-ignore
 import Setup from "./interview_module/components/Setup";
 // @ts-ignore
@@ -96,10 +100,12 @@ const App = () => {
             </PublicRoute>
           }
         />
-
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/hr-dashboard" element={<ProtectedRoute><HrDashboard /></ProtectedRoute>} />
         <Route path="/interview/setup" element={<ProtectedRoute><Setup /></ProtectedRoute>} />
         <Route path="/interview/session" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
+        <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
         <Route path="/interview/feedback" element={<ProtectedRoute><FeedbackDisplay /></ProtectedRoute>} />
       </Routes>
     </Router>

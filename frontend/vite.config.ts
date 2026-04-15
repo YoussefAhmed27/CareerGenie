@@ -13,6 +13,14 @@ export default defineConfig({
       '/practice': {
         target: 'http://localhost:5000',
         changeOrigin: true,
+      },
+      '/api/profile': {
+        target: 'http://localhost:5000',
+        changeOrigin: true,
+      },
+      '/uploads': {
+        target: 'http://localhost:5000',
+        changeOrigin: true,
       }
     }
   }

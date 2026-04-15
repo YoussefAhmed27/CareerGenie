@@ -21,7 +21,7 @@ CREATE TABLE candidate (
     last_login_at TIMESTAMP
 );
 
-ALTER TABLE candidate ADD COLUMN current_role VARCHAR(120);
+ALTER TABLE candidate ADD COLUMN "current_role" VARCHAR(120);
 
 CREATE TABLE subscription (
     subscription_id SERIAL PRIMARY KEY,
