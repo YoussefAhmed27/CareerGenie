@@ -85,53 +85,53 @@ const Profile: React.FC = () => {
     }, []);
 
     useEffect(() => {
-    const fetchProtectedFiles = async () => {
-        try {
-            const token = localStorage.getItem("token");
+        const fetchProtectedFiles = async () => {
+            try {
+                const token = localStorage.getItem("token");
 
-            if (!token) return;
+                if (!token) return;
 
-            if (profile.photo_filename) {
-                const photoRes = await fetch("/api/profile/photo", {
-                    headers: {
-                        Authorization: `Bearer ${token}`
-                    },
-                    credentials: "include"
-                });
+                if (profile.photo_filename) {
+                    const photoRes = await fetch("/api/profile/photo", {
+                        headers: {
+                            Authorization: `Bearer ${token}`
+                        },
+                        credentials: "include"
+                    });
 
-                if (photoRes.ok) {
-                    const photoBlob = await photoRes.blob();
-                    const photoUrl = URL.createObjectURL(photoBlob);
-                    setPhotoPreviewUrl(photoUrl);
+                    if (photoRes.ok) {
+                        const photoBlob = await photoRes.blob();
+                        const photoUrl = URL.createObjectURL(photoBlob);
+                        setPhotoPreviewUrl(photoUrl);
+                    }
                 }
-            }
 
-            if (profile.cv_filename) {
-                const cvRes = await fetch("/api/profile/cv", {
-                    headers: {
-                        Authorization: `Bearer ${token}`
-                    },
-                    credentials: "include"
-                });
+                if (profile.cv_filename) {
+                    const cvRes = await fetch("/api/profile/cv", {
+                        headers: {
+                            Authorization: `Bearer ${token}`
+                        },
+                        credentials: "include"
+                    });
 
-                if (cvRes.ok) {
-                    const cvBlob = await cvRes.blob();
-                    const cvUrl = URL.createObjectURL(cvBlob);
-                    setCvPreviewUrl(cvUrl);
+                    if (cvRes.ok) {
+                        const cvBlob = await cvRes.blob();
+                        const cvUrl = URL.createObjectURL(cvBlob);
+                        setCvPreviewUrl(cvUrl);
+                    }
                 }
+            } catch (err) {
+                console.error("Failed to load protected files", err);
             }
-        } catch (err) {
-            console.error("Failed to load protected files", err);
-        }
-    };
+        };
 
-    fetchProtectedFiles();
+        fetchProtectedFiles();
 
-    return () => {
-        if (photoPreviewUrl) URL.revokeObjectURL(photoPreviewUrl);
-        if (cvPreviewUrl) URL.revokeObjectURL(cvPreviewUrl);
-    };
-    }, [profile.photo_filename, profile.cv_filename, photoPreviewUrl, cvPreviewUrl]);
+        return () => {
+            if (photoPreviewUrl) URL.revokeObjectURL(photoPreviewUrl);
+            if (cvPreviewUrl) URL.revokeObjectURL(cvPreviewUrl);
+        };
+    }, [profile.photo_filename, profile.cv_filename]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         setProfile({
@@ -189,12 +189,7 @@ const Profile: React.FC = () => {
         }
     };
 
-    const handlePhotoUpload = async () => {
-        if (!photoFile) {
-            setError("Please choose a photo first.");
-            return;
-        }
-
+    const handlePhotoUpload = async (file: File) => {
         setMessage("");
         setError("");
 
@@ -209,7 +204,7 @@ const Profile: React.FC = () => {
             const { csrfToken } = await csrfRes.json();
 
             const formData = new FormData();
-            formData.append("photo", photoFile);
+            formData.append("photo", file);
 
             const res = await fetch("/api/profile/upload-photo", {
                 method: "POST",
@@ -229,10 +224,10 @@ const Profile: React.FC = () => {
 
             setProfile((prev) => ({
                 ...prev,
-                photo_filename: photoFile.name
+                photo_filename: file.name
             }));
 
-            const localPhotoUrl = URL.createObjectURL(photoFile);
+            const localPhotoUrl = URL.createObjectURL(file);
             setPhotoPreviewUrl(localPhotoUrl);
 
             setPhotoFile(null);
@@ -242,12 +237,7 @@ const Profile: React.FC = () => {
         }
     };
 
-    const handleCvUpload = async () => {
-        if (!cvFile) {
-            setError("Please choose a PDF CV first.");
-            return;
-        }
-
+    const handleCvUpload = async (file: File) => {
         setMessage("");
         setError("");
 
@@ -262,7 +252,7 @@ const Profile: React.FC = () => {
             const { csrfToken } = await csrfRes.json();
 
             const formData = new FormData();
-            formData.append("cv", cvFile);
+            formData.append("cv", file);
 
             const res = await fetch("/api/profile/upload-cv", {
                 method: "POST",
@@ -282,16 +272,49 @@ const Profile: React.FC = () => {
 
             setProfile((prev) => ({
                 ...prev,
-                cv_filename: cvFile.name
+                cv_filename: file.name
             }));
 
-            const localCvUrl = URL.createObjectURL(cvFile);
+            const localCvUrl = URL.createObjectURL(file);
             setCvPreviewUrl(localCvUrl);
 
             setCvFile(null);
             setMessage("CV uploaded successfully.");
         } catch (err: any) {
             setError(err.message || "Failed to upload CV");
+        }
+    };
+
+    const handleDeleteAccount = async () => {
+        if (!window.confirm("Are you sure you want to completely delete your account? This action cannot be undone.")) return;
+        
+        try {
+            const token = localStorage.getItem("token");
+            const csrfRes = await fetch("/auth/csrf", {
+                method: "GET",
+                credentials: "include"
+            });
+            const { csrfToken } = await csrfRes.json();
+
+            const res = await fetch("/api/profile/me", {
+                method: "DELETE",
+                headers: {
+                    "X-CSRF-Token": csrfToken,
+                    Authorization: `Bearer ${token}`
+                },
+                credentials: "include"
+            });
+
+            if (res.ok) {
+                localStorage.removeItem("token");
+                localStorage.removeItem("user_name");
+                window.location.href = "/login";
+            } else {
+                const data = await res.json();
+                setError(data.error || "Failed to delete account");
+            }
+        } catch (err: any) {
+            setError(err.message || "Failed to delete account");
         }
     };
 
@@ -305,47 +328,50 @@ const Profile: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-[#11152D] text-white px-4 py-8">
-            <div className="max-w-5xl mx-auto bg-[#11152dde] rounded-2xl shadow-2xl p-6 md:p-8">
+            <div className="max-w-5xl mx-auto bg-[#11152dde] rounded-2xl shadow-2xl p-6 md:p-8 border border-white/5">
                 <div className="flex items-center justify-between mb-6">
                     <h1 className="text-3xl font-bold">My Profile</h1>
 
                     <button
                         type="button"
                         onClick={() => window.history.back()}
-                        className="px-4 py-2 rounded-xl bg-white/10 border border-white/20 hover:bg-white/20 transition"
+                        className="px-4 py-2 rounded-xl bg-white/10 border border-white/20 hover:bg-white/20 transition-colors font-medium"
                     >
                         ← Back
                     </button>
                 </div>
 
                 {message && (
-                    <div className="mb-4 rounded-xl border border-green-500/50 bg-green-500/10 px-4 py-3 text-green-400">
+                    <div className="mb-4 rounded-xl border border-green-500/50 bg-green-500/10 px-4 py-3 text-green-400 font-medium">
                         {message}
                     </div>
                 )}
 
                 {error && (
-                    <div className="mb-4 rounded-xl border border-red-500/50 bg-red-500/10 px-4 py-3 text-red-400">
+                    <div className="mb-4 rounded-xl border border-red-500/50 bg-red-500/10 px-4 py-3 text-red-400 font-medium">
                         {error}
                     </div>
                 )}
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <div className="space-y-6 relative z-50">
+                        
+                        {/* Profile Photo Section */}
                         <div className="rounded-2xl bg-white/5 p-5 border border-white/10">
                             <h2 className="text-xl font-semibold mb-4">Profile Photo</h2>
 
-                            <div className="w-36 h-36 rounded-full overflow-hidden bg-white/10 mx-auto mb-4 border border-white/20">
-                                    {photoPreviewUrl ? (
-                                        <img
-                                            src={photoPreviewUrl}
-                                            alt="Profile"
-                                            className="w-full h-full object-cover"
-                                        />
-                                    ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-white/40 text-sm">
-                                        No photo
-                                    </div>
+                            <div className="w-36 h-36 rounded-full overflow-hidden bg-white/10 mx-auto mb-4 border border-white/20 flex items-center justify-center shadow-inner">
+                                {photoPreviewUrl ? (
+                                    <img
+                                        src={photoPreviewUrl}
+                                        alt="Profile"
+                                        className="w-full h-full object-cover"
+                                    />
+                                ) : (
+                                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-white/30">
+                                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                        <circle cx="12" cy="7" r="4"></circle>
+                                    </svg>
                                 )}
                             </div>
 
@@ -353,27 +379,31 @@ const Profile: React.FC = () => {
                                 ref={photoInputRef}
                                 type="file"
                                 accept="image/*"
-                                onChange={(e) => setPhotoFile(e.target.files?.[0] || null)}
+                                onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                        setPhotoFile(file);
+                                        handlePhotoUpload(file);
+                                    }
+                                }}
                                 className="hidden"
                             />
 
                             <button
                                 type="button"
                                 onClick={() => photoInputRef.current?.click()}
-                                className="w-full py-3 mb-3 rounded-xl bg-white/10 border border-white/20 text-white font-semibold hover:bg-white/20 transition"
+                                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-linear-to-r from-[#E240CA] via-[#5975E2] to-[#2EE8F1] hover:brightness-110 active:scale-[0.98] transition-all text-[#11152D] font-bold shadow-lg"
                             >
-                                {photoFile ? photoFile.name : "Choose Profile Photo"}
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={handlePhotoUpload}
-                                className="w-full py-3 rounded-xl bg-linear-to-r from-[#E240CA] via-[#5975E2] to-[#2EE8F1] text-[#11152D] font-bold relative z-50"
-                            >
+                                <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="17 8 12 3 7 8"></polyline>
+                                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                                </svg>
                                 Upload Photo
                             </button>
                         </div>
 
+                        {/* CV / Resume Section */}
                         <div className="rounded-2xl bg-white/5 p-5 border border-white/10 relative z-50">
                             <h2 className="text-xl font-semibold mb-4">CV / Resume</h2>
 
@@ -381,24 +411,27 @@ const Profile: React.FC = () => {
                                 ref={cvInputRef}
                                 type="file"
                                 accept="application/pdf"
-                                onChange={(e) => setCvFile(e.target.files?.[0] || null)}
+                                onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                        setCvFile(file);
+                                        handleCvUpload(file);
+                                    }
+                                }}
                                 className="hidden"
                             />
 
                             <button
                                 type="button"
                                 onClick={() => cvInputRef.current?.click()}
-                                className="w-full py-3 mb-3 rounded-xl bg-white/10 border border-white/20 text-white font-semibold hover:bg-white/20 transition"
+                                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-linear-to-r from-[#E240CA] via-[#5975E2] to-[#2EE8F1] hover:brightness-110 active:scale-[0.98] transition-all text-[#11152D] font-bold shadow-lg"
                             >
-                                {cvFile ? cvFile.name : "Choose PDF CV"}
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={handleCvUpload}
-                                className="w-full py-3 rounded-xl bg-linear-to-r from-[#E240CA] via-[#5975E2] to-[#2EE8F1] text-[#11152D] font-bold mb-3 relative z-50"
-                            >
-                                Upload PDF CV
+                                <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="17 8 12 3 7 8"></polyline>
+                                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                                </svg>
+                                Upload CV
                             </button>
 
                             {cvPreviewUrl && (
@@ -406,16 +439,40 @@ const Profile: React.FC = () => {
                                     href={cvPreviewUrl}
                                     target="_blank"
                                     rel="noreferrer"
-                                    className="text-[#2EE8F1] underline text-sm"
+                                    className="w-full flex items-center justify-center gap-2 py-2.5 mt-3 rounded-xl bg-white/5 text-white/70 border border-white/10 hover:bg-white/10 hover:text-white transition-all text-sm font-medium"
                                 >
-                                    View current CV
+                                    <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                        <polyline points="14 2 14 8 20 8"></polyline>
+                                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                                        <polyline points="10 9 9 9 8 9"></polyline>
+                                    </svg>
+                                    View Current CV
                                 </a>
                             )}
+                        </div>
+
+                        <div>
+                            <button
+                                type="button"
+                                onClick={handleDeleteAccount}
+                                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20 hover:border-red-500/40 active:scale-[0.98] transition-all font-semibold"
+                            >
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                    <line x1="10" y1="11" x2="10" y2="17"></line>
+                                    <line x1="14" y1="11" x2="14" y2="17"></line>
+                                </svg>
+                                Delete Account
+                            </button>
                         </div>
                     </div>
 
                     <div className="lg:col-span-2">
                         <form onSubmit={handleSaveProfile} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            
                             <div className="md:col-span-2">
                                 <label className="block mb-2 text-sm text-white/70">Full Name</label>
                                 <input
@@ -518,10 +575,10 @@ const Profile: React.FC = () => {
                                 />
                             </div>
 
-                            <div className="md:col-span-2">
+                            <div className="md:col-span-2 mt-2">
                                 <button
                                     type="submit"
-                                    className="w-full py-3 rounded-xl bg-linear-to-r from-[#E240CA] via-[#5975E2] to-[#2EE8F1] text-[#11152D] font-bold"
+                                    className="w-full py-3.5 rounded-xl bg-linear-to-r from-[#E240CA] via-[#5975E2] to-[#2EE8F1] hover:brightness-110 active:scale-[0.98] transition-all text-[#11152D] font-bold shadow-lg"
                                 >
                                     Save Profile
                                 </button>

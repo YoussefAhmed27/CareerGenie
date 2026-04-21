@@ -74,9 +74,9 @@ const Login: React.FC = () => {
             googleDiv.innerHTML = "";
 
             window.google.accounts.id.renderButton(googleDiv, {
-                theme: "outline",
-                size: "large",
-                width: 300
+                type: "icon",
+                shape: "circle",
+                size: "large"
             });
         }
     }, []);
@@ -202,7 +202,7 @@ const Login: React.FC = () => {
     };
 
     return (
-        <div className="w-full max-w-125 bg-[#11152dde] p-6 sm:p-8 rounded-2xl shadow-2xl text-white flex flex-col h-175 max-h-[95vh] font-sans">
+        <div className="w-full max-w-125 bg-[#11152dde] p-6 sm:p-8 rounded-2xl shadow-2xl text-white flex flex-col h-175 max-h-[95vh] font-sans mx-auto">
             <div className="w-full flex flex-col h-full overflow-hidden">
 
                 <div className="mb-6 text-center shrink-0">
@@ -236,13 +236,13 @@ const Login: React.FC = () => {
                 </div>
 
                 {error && (
-                    <div className="bg-red-500/10 border border-red-500/50 text-red-400 text-sm py-2 px-4 rounded-xl mb-4 text-center animate-pulse shrink-0">
+                    <div className="w-[90%] mx-auto bg-red-500/10 border border-red-500/50 text-red-400 text-sm py-2 px-4 rounded-xl mb-4 text-center animate-pulse shrink-0 break-words">
                         {error}
                     </div>
                 )}
 
                 <form
-                    className="flex flex-col gap-4 flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] pb-2"
+                    className="flex flex-col gap-4 flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] pb-2 px-1 pt-2"
                     onSubmit={handleSubmit}
                 >
                     {!isLoginMode && (
@@ -251,14 +251,14 @@ const Login: React.FC = () => {
                                 name="name"
                                 type="text"
                                 placeholder="Name"
-                                className="px-4 py-3 rounded-2xl bg-white/10 border border-white/20 placeholder-white/40 text-white focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-all shrink-0"
+                                className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/20 placeholder-white/40 text-white focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-all shrink-0"
                                 required
                             />
                             <input
                                 name="phone"
                                 type="tel"
                                 placeholder="Phone number"
-                                className="px-4 py-3 rounded-2xl bg-white/10 border border-white/20 placeholder-white/40 text-white focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-all shrink-0"
+                                className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/20 placeholder-white/40 text-white focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-all shrink-0"
                                 required
                             />
                         </>
@@ -268,7 +268,7 @@ const Login: React.FC = () => {
                         name="email"
                         type="email"
                         placeholder="Email Address"
-                        className="px-4 py-3 rounded-2xl bg-white/10 border border-white/20 placeholder-white/40 text-white focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-all shrink-0"
+                        className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/20 placeholder-white/40 text-white focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-all shrink-0"
                         required
                     />
 
@@ -276,7 +276,7 @@ const Login: React.FC = () => {
                         name="password"
                         type="password"
                         placeholder="Password"
-                        className="px-4 py-3 rounded-2xl bg-white/10 border border-white/20 placeholder-white/40 text-white focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-all shrink-0"
+                        className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/20 placeholder-white/40 text-white focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-all shrink-0"
                         required
                     />
 
@@ -286,7 +286,7 @@ const Login: React.FC = () => {
                                 name="confirmPassword"
                                 type="password"
                                 placeholder="Confirm password"
-                                className="px-4 py-3 rounded-2xl bg-white/10 border border-white/20 placeholder-white/40 text-white focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-all shrink-0"
+                                className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/20 placeholder-white/40 text-white focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-all shrink-0"
                                 required
                             />
 
@@ -337,8 +337,6 @@ const Login: React.FC = () => {
                     </button>
                 </form>
 
-                <div id="googleSignInDiv" className="flex justify-center mt-4 mb-2 shrink-0"></div>
-
                 <div className="mt-6 pt-4 shrink-0 border-t border-white/5">
                     <p className="text-center text-sm text-white/50">
                         {isLoginMode ? "Not joined yet? " : "Already with us? "}
@@ -354,9 +352,16 @@ const Login: React.FC = () => {
                     </p>
 
                     <div className="flex justify-center gap-4 sm:gap-6 mt-4">
-                        <button className="w-11 h-11 rounded-full flex items-center justify-center bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/30 transition-all">
-                            <FaGoogle className="text-white text-lg" />
-                        </button>
+                        <div className="relative w-11 h-11 rounded-full flex items-center justify-center group cursor-pointer overflow-hidden">
+                            <div className="absolute inset-0 w-full h-full rounded-full flex items-center justify-center bg-white/5 group-hover:bg-white/10 border border-white/10 group-hover:border-white/30 transition-all pointer-events-none">
+                                <FaGoogle className="text-white text-lg" />
+                            </div>
+                            
+                            <div className="absolute inset-0 z-10 opacity-[0.01] flex items-center justify-center">
+                                <div id="googleSignInDiv"></div>
+                            </div>
+                        </div>
+
                         <button className="w-11 h-11 rounded-full flex items-center justify-center bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/30 transition-all">
                             <FaFacebookF className="text-white text-lg" />
                         </button>

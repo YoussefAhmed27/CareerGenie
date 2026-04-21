@@ -12,5 +12,38 @@ services:
       - pgdata:/var/lib/postgresql/data
       - ./backend-node/SQL:/docker-entrypoint-initdb.d/
 
+  minio:
+    image: minio/minio:latest
+    container_name: careergenie-minio
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: password123
+    ports:
+      - "9000:9000" 
+      - "9001:9001" 
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+
+  createbucket:
+    image: minio/mc:latest
+    container_name: careergenie-minio-setup
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      echo 'Waiting for MinIO to spin up...';
+      until (mc alias set myminio http://minio:9000 admin password123); do
+        echo '...still waiting for MinIO...';
+        sleep 1;
+      done;
+      echo 'MinIO is up! Provisioning bucket...';
+      mc mb myminio/interview-recordings --ignore-existing;
+      mc anonymous set private myminio/interview-recordings;
+      echo 'Bucket successfully configured. Exiting setup.';
+      exit 0;
+      "
+
 volumes:
   pgdata:
+  minio_data:

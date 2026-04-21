@@ -8,7 +8,7 @@ const API_CLIENT = axios.create({
 });
 
 const AUTH_API_CLIENT = axios.create({
-  baseURL: 'http://localhost:5000/api',
+  baseURL: 'http://localhost:5000/api', 
 });
 
 export const getExistingCv = async () => {
@@ -47,12 +47,13 @@ export const uploadCvPdf = async (file) => {
   }
 };
 
-export const startSession = async (cv_text, jd_text, voice_id) => {
+export const startSession = async (cv_text, jd_text, voice_id, job_role) => {
   try {
     const response = await API_CLIENT.post('/start_session', {
       cv_text,
       jd_text,
       voice_id,
+      job_role,
     });
     return response.data.session_id;
   } catch (error) {
@@ -110,7 +111,6 @@ export const getInterviewFeedback = async (session_id) => {
   }
 };
 
-// Execute code via Piston
 export const executeCode = async ({ language, version, code, stdin = '' }) => {
   try {
     const response = await API_CLIENT.post('/execute_code', {
@@ -134,7 +134,6 @@ export const getPistonRuntimes = async () => {
   }
 };
 
-// upload recording to server
 export const uploadInterviewRecording = async (session_id, videoBlob) => {
   try {
     const formData = new FormData();
@@ -148,5 +147,116 @@ export const uploadInterviewRecording = async (session_id, videoBlob) => {
     return response.data;
   } catch (error) {
     console.error('Failed to upload interview recording:', error);
+  }
+};
+
+export const saveInterviewResult = async (payload) => {
+  try {
+    const token = localStorage.getItem('token');
+
+    const csrfRes = await fetch('/auth/csrf', { credentials: 'include' });
+    if (!csrfRes.ok) throw new Error("Could not fetch CSRF token");
+    const csrfData = await csrfRes.json();
+
+    const response = await fetch('http://localhost:5000/api/interviews', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'X-CSRF-Token': csrfData.csrfToken
+      },
+      credentials: 'include',
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const errData = await response.json();
+      throw new Error(errData.error || 'Failed to save interview');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Save Interview Error:", error);
+    throw error;
+  }
+};
+
+export const getInterviewHistory = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch('http://localhost:5000/api/interviews', {
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${token}` },
+      credentials: 'include'
+    });
+    
+    if (!response.ok) throw new Error("Failed to fetch history");
+    return await response.json();
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const getInterviewDetail = async (id) => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`http://localhost:5000/api/interviews/${id}`, {
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${token}` },
+      credentials: 'include'
+    });
+    
+    if (!response.ok) throw new Error("Failed to fetch detail");
+    return await response.json();
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const deleteInterview = async (id) => {
+  try {
+    const token = localStorage.getItem('token');
+    const csrfRes = await fetch('/auth/csrf', { credentials: 'include' });
+    if (!csrfRes.ok) throw new Error("Could not fetch CSRF token");
+    const csrfData = await csrfRes.json();
+
+    const response = await fetch(`http://localhost:5000/api/interviews/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'X-CSRF-Token': csrfData.csrfToken
+      },
+      credentials: 'include'
+    });
+
+    if (!response.ok) {
+      const errData = await response.json();
+      throw new Error(errData.error || 'Failed to delete interview');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Delete Interview Error:", error);
+    throw error;
+  }
+};
+
+export const getAnalyticsData = async (timeframe, role) => {
+  try {
+    const token = localStorage.getItem('token');
+    const params = new URLSearchParams();
+    if (timeframe) params.append('timeframe', timeframe);
+    if (role) params.append('role', role);
+
+    const response = await fetch(`http://localhost:5000/api/interviews/analytics?${params.toString()}`, {
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${token}` },
+      credentials: 'include'
+    });
+
+    if (!response.ok) throw new Error("Failed to fetch analytics");
+    return await response.json();
+  } catch (error) {
+    throw error;
   }
 };

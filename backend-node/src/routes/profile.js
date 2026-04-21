@@ -210,4 +210,17 @@ router.get("/cv", requireAuth, async (req, res, next) => {
     }
 });
 
+router.delete("/me", requireAuth, async (req, res, next) => {
+    try {
+        await pool.query(
+            "DELETE FROM candidate WHERE candidate_id = $1", 
+            [req.user.candidate_id]
+        );
+
+        res.json({ message: "Account deleted successfully" });
+    } catch (err) {
+        next(err);
+    }
+});
+
 module.exports = router;

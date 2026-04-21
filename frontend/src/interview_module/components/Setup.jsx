@@ -155,7 +155,8 @@ export default function Setup() {
 
     try {
       const selectedAvatar = AVATAR_ROSTER.find(a => a.id === selectedAvatarId);
-      const sessionId = await startSession(uploadedCvText, jdText, selectedAvatar.voiceId);
+      const sessionId = await startSession(uploadedCvText, jdText, selectedAvatar.voiceId, jobRole);
+      
       sessionStorage.setItem('current_session_id', sessionId);
       sessionStorage.setItem('current_avatar', JSON.stringify(selectedAvatar));
       
@@ -183,7 +184,6 @@ export default function Setup() {
 
           <div className="setup-card">
             
-            {/* STEP 1: CONTEXT */}
             {step === 1 && (
               <div className="step-1-container">
                 <img src="/genie-character.png" alt="Genie" className="setup-genie-image" />

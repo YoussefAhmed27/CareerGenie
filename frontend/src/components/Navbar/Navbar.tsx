@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { NavbarMenu } from "../mockData/data";
 import { HiOutlineMenu, HiOutlineX } from "react-icons/hi";
-import { FiUser, FiLogOut, FiChevronDown } from "react-icons/fi"; 
+import { FiUser, FiLogOut, FiChevronDown, FiClock, FiTrendingUp } from "react-icons/fi"; 
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -46,7 +46,7 @@ const Navbar = () => {
   const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, link: string, title: string) => {
     e.preventDefault();
     setIsOpen(false); 
-    setActiveItem(title); // Update the active link visually
+    setActiveItem(title); 
 
     if (link.startsWith('#')) {
       const targetId = link.substring(1);
@@ -118,6 +118,26 @@ const Navbar = () => {
                       <FiUser /> Profile
                     </button>
 
+                    <button
+                      onClick={() => {
+                        navigate("/analytics");
+                        setProfileOpen(false);
+                      }}
+                      className="px-4 py-2 text-left text-white hover:bg-white/5 transition-colors flex items-center gap-2 rounded-xl"
+                    >
+                      <FiTrendingUp className="text-[#f0f6f7]" /> Analytics
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        navigate("/history");
+                        setProfileOpen(false);
+                      }}
+                      className="px-4 py-2 text-left text-white hover:bg-white/5 transition-colors flex items-center gap-2 rounded-xl"
+                    >
+                      <FiClock /> Interviews
+                    </button>
+
                     <button 
                       onClick={handleLogout}
                       className="px-4 py-2 text-left text-red-400 hover:text-red-300 hover:bg-white/5 transition-colors flex items-center gap-2 rounded-xl"
@@ -182,6 +202,33 @@ const Navbar = () => {
           {token ? (
             <>
               <p className="text-[#2EE8F1] font-semibold text-center pb-2">Hi, {userName}</p>
+              <button
+                onClick={() => {
+                  navigate("/profile");
+                  setIsOpen(false);
+                }}
+                className="px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-white w-full font-semibold flex justify-center items-center gap-2"
+              >
+                <FiUser /> Profile
+              </button>
+              <button
+                onClick={() => {
+                  navigate("/analytics");
+                  setIsOpen(false);
+                }}
+                className="px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-white w-full font-semibold flex justify-center items-center gap-2"
+              >
+                <FiTrendingUp className="text-[#2EE8F1]" /> Analytics
+              </button>
+              <button
+                onClick={() => {
+                  navigate("/history");
+                  setIsOpen(false);
+                }}
+                className="px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-white w-full font-semibold flex justify-center items-center gap-2"
+              >
+                <FiClock /> Interview History
+              </button>
               <button
                 onClick={handleLogout}
                 className="px-6 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 w-full font-semibold flex justify-center items-center gap-2"

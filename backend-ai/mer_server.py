@@ -5,14 +5,24 @@ import json
 import gc
 import torch
 import subprocess as sp
-from fastapi import FastAPI, UploadFile, File, Form
 import uvicorn
+from fastapi import FastAPI, UploadFile, File, Form
+from fastapi.middleware.cors import CORSMiddleware 
 from mer_engine import MERPipeline
 
 app = FastAPI()
 
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 print("Booting up CareerGenie MER Server...")
-pipeline = None 
+pipeline = None
 
 @app.post("/api/analyze_interview")
 async def analyze_interview(
@@ -25,7 +35,7 @@ async def analyze_interview(
     
     # Only load MER when video available
     if pipeline is None:
-        print("🚀 Booting MER Engine into VRAM for analysis...")
+        print("Booting MER Engine into VRAM for analysis...")
         pipeline = MERPipeline(weights_path="./models/best_careergenie_endtoend.pth")
     
     run_id = int(time.time())

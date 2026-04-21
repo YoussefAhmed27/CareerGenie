@@ -1,13 +1,15 @@
 import React, { useEffect, useState, useRef } from 'react'; 
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 
-// ── COMPONENTS ──
 import Login from "./components/Login";
 import Home from "./components/Home-page";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import HrDashboard from "./components/Hr-dashboard";
 import Profile from "./pages/Profile";
+import InterviewHistory from "./pages/InterviewHistory";
+import InterviewDetail from "./pages/InterviewDetail";
+import AnalyticsDashboard from "./pages/AnalyticsDashboard";
 
 // @ts-ignore
 import Setup from "./interview_module/components/Setup";
@@ -16,7 +18,7 @@ import Chat from "./interview_module/components/Chat";
 // @ts-ignore
 import FeedbackDisplay from "./interview_module/components/FeedbackDisplay";
 
-// ── AUTH GUARDS ──
+
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const token = localStorage.getItem('token'); 
   return token ? <>{children}</> : <Navigate to="/login" />; 
@@ -29,11 +31,9 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
 
 const App = () => {
   const [isWakingUp, setIsWakingUp] = useState(true);
-  const hasFetched = useRef(false); // <-- THIS FIXES THE RANDOM LOGOUTS
+  const hasFetched = useRef(false); 
 
-  // ── AUTO-LOGIN VERIFICATION ──
   useEffect(() => {
-    // Prevent React Strict Mode from double-firing and killing the refresh token
     if (hasFetched.current) return;
     hasFetched.current = true;
 
@@ -105,8 +105,11 @@ const App = () => {
         <Route path="/hr-dashboard" element={<ProtectedRoute><HrDashboard /></ProtectedRoute>} />
         <Route path="/interview/setup" element={<ProtectedRoute><Setup /></ProtectedRoute>} />
         <Route path="/interview/session" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
-        <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
         <Route path="/interview/feedback" element={<ProtectedRoute><FeedbackDisplay /></ProtectedRoute>} />
+        <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+        <Route path="/history" element={<ProtectedRoute><InterviewHistory /></ProtectedRoute>} />
+        <Route path="/history/:id" element={<ProtectedRoute><InterviewDetail /></ProtectedRoute>} />
+        <Route path="/analytics" element={<ProtectedRoute><AnalyticsDashboard /></ProtectedRoute>} />
       </Routes>
     </Router>
   );

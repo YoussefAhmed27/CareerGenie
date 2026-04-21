@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import '../interview-styles.css';
+import { saveInterviewResult } from '../api/interviewService';
 
-// ─── CONSTANTS & COLORS ──────────────────────────────────────────────────────
 const CYAN = '#00f2fe';
 const MAGENTA = '#d422eb';
 
@@ -13,7 +13,6 @@ function scoreColor(score) {
   return '#ff0844';
 }
 
-// ─── ICONS ───────────────────────────────────────────────────────────────────
 const IconStrength = () => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={CYAN} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, filter: `drop-shadow(0 0 6px ${CYAN}80)` }}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
 );
@@ -27,7 +26,6 @@ const IconTip = () => (
   </svg>
 );
 
-// ─── BACKGROUND PARTICLES ────────────────────────────────────────────────────
 const ParticleCanvas = () => {
   const ref = useRef(null);
   useEffect(() => {
@@ -67,7 +65,6 @@ const ParticleCanvas = () => {
   return <canvas ref={ref} style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', pointerEvents: 'none', zIndex: 0 }} />;
 };
 
-// ─── 3D SPHERE ───────────────────────────────────────────────────────────────
 const SkillsSphere = ({ skills }) => {
   const ref = useRef(null);
   useEffect(() => {
@@ -161,7 +158,6 @@ const SkillsSphere = ({ skills }) => {
   return <canvas ref={ref} width={350} height={350} style={{ display: 'block', margin: '0 auto', cursor: 'grab' }} />;
 };
 
-// ─── TIME SERIES METRIC GRAPH ────────────────────────────────────────────────
 const TimelineChart = ({ lines, duration, title }) => {
   const pathDataList = useMemo(() => {
     return lines.map(line => {
@@ -217,7 +213,6 @@ const TimelineChart = ({ lines, duration, title }) => {
   );
 };
 
-// ─── SCORE ORB ───────────────────────────────────────────────────────────────
 const ScoreOrb = ({ score }) => {
   const [display, setDisplay] = useState(0);
   useEffect(() => {
@@ -253,7 +248,6 @@ const ScoreOrb = ({ score }) => {
   );
 };
 
-// ─── MASSIVE DONUT (FOR HEADERS) ─────────────────────────────────────────────
 const MassiveDonut = ({ score, label, size = 160 }) => {
   const r = size * 0.38, circ = 2 * Math.PI * r, offset = circ - (score / 10) * circ;
   const c = scoreColor(score);
@@ -284,7 +278,6 @@ const MiniDonut = ({ score, label, size = 100 }) => {
   );
 };
 
-// ─── PSYCHOMETRIC RADAR ──────────────────────────────────────────────────────
 const GlowingRadarChart = ({ traits }) => {
   const [activeTrait, setActiveTrait] = useState(null);
 
@@ -352,7 +345,6 @@ const GlowingRadarChart = ({ traits }) => {
   );
 };
 
-// Animated Metric Bar
 const MetricBarAnimated = ({ label, score }) => {
   const [animate, setAnimate] = useState(false);
   const ref = useRef(null);
@@ -394,19 +386,47 @@ const InsightList = ({ items, type }) => {
 };
 
 
-export default function FeedbackDisplay({ data, sessionId }) {
+export default function FeedbackDisplay({ data, sessionId, videoUrl, isHistoryView = false }) {
   const [videoDuration, setVideoDuration] = useState(0);
   const scrollContainerRef = useRef(null);
+  const hasSaved = useRef(false);
   
-  // Drag to scroll logic
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
 
   const { overall_score, behavioral_report, technical_report, error } = data;
 
-  const handleExitClick = () => { window.location.href = '/'; };
+  useEffect(() => {
+    if (!isHistoryView && data && sessionId && !hasSaved.current && !data.error) {
+      hasSaved.current = true;
+      const payload = {
+        job_role: data.job_role || "Candidate",
+        interview_mode: data.mode || "comprehensive",
+        overall_score: data.overall_score || 0,
+        video_object_key: `${sessionId}.webm`,
+        feedback_data: data
+      };
+      
+      saveInterviewResult(payload).catch(err => {
+        console.error("Failed to automatically save interview result:", err);
+      });
+    }
+  }, [data, sessionId, isHistoryView]);
+
+  const handleExitClick = () => { 
+    if (isHistoryView) {
+      window.location.href = '/history';
+    } else {
+      window.location.href = '/'; 
+    }
+  };
+
   const handleRestartClick = async () => {
+    if (isHistoryView) {
+      window.location.href = '/history';
+      return;
+    }
     try {
       const response = await fetch(`http://127.0.0.1:8000/restart_session/${sessionId}`, { method: 'POST' });
       if (!response.ok) throw new Error("Failed to restart");
@@ -417,12 +437,10 @@ export default function FeedbackDisplay({ data, sessionId }) {
     }
   };
 
-  // Handle Start Coaching Session
   const handleStartCoaching = () => {
     window.location.href = `/interview/session?sessionId=${sessionId}&mode=coaching`;
   };
 
-  // Mouse Drag Handlers
   const onMouseDown = (e) => {
     setIsDragging(true);
     setStartX(e.pageX - scrollContainerRef.current.offsetLeft);
@@ -438,10 +456,8 @@ export default function FeedbackDisplay({ data, sessionId }) {
     scrollContainerRef.current.scrollLeft = scrollLeft - walk;
   };
 
-  // Natural Wheel Scroll Transition (Horizontal)
   const handleWheel = (e) => {
     if (scrollContainerRef.current) {
-      // If user scrolls down on mouse wheel, push the container right
       scrollContainerRef.current.scrollLeft += e.deltaY;
     }
   };
@@ -459,7 +475,6 @@ export default function FeedbackDisplay({ data, sessionId }) {
     );
   }
 
-  // Data mapping
   const bReport = behavioral_report || {};
   const tReport = technical_report || {};
   const header = bReport.header || tReport.header || {};
@@ -493,12 +508,9 @@ export default function FeedbackDisplay({ data, sessionId }) {
     >
       <ParticleCanvas />
       
-      {/* =========================================
-          SCREEN 1: OVERVIEW LOBBY
-      ========================================= */}
+      {/* Interview Overview Page*/}
       <section className="snap-screen" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '50px', padding: '60px 80px', boxSizing: 'border-box' }}>
         
-        {/* Left Container Group */}
         <div style={{ flex: '0 0 500px', background: 'rgba(17, 20, 29, 0.85)', padding: '50px', borderRadius: '30px', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column', gap: '30px', zIndex: 1, boxShadow: '0 20px 50px rgba(0,0,0,0.5)', backdropFilter: 'blur(20px)' }}>
           <div>
             <h1 style={{ fontSize: '3.6rem', whiteSpace: 'nowrap', fontWeight: '900', margin: '0 0 10px 0', background: 'linear-gradient(90deg, #fff, #a0aab2)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
@@ -526,7 +538,7 @@ export default function FeedbackDisplay({ data, sessionId }) {
 
           <div style={{ borderRadius: '16px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', background: '#000', boxShadow: 'inset 0 0 20px rgba(0,0,0,0.5)' }}>
             <video 
-              src={`http://127.0.0.1:8000/recordings/${sessionId}.webm`} 
+              src={videoUrl || data.video_url || `http://127.0.0.1:8000/recordings/${sessionId}.webm`} 
               controls 
               style={{ width: '100%', display: 'block' }} 
               onLoadedMetadata={(e) => setVideoDuration(e.target.duration)}
@@ -534,37 +546,44 @@ export default function FeedbackDisplay({ data, sessionId }) {
           </div>
 
           <div style={{ display: 'flex', gap: '16px', marginTop: '10px' }}>
-            <button onClick={handleExitClick} className="btn-exit" style={{ flex: 1 }}>EXIT</button>
-            <button onClick={handleRestartClick} className="btn-retry" style={{ flex: 1.5 }}>RETRY INTERVIEW</button>
+            <button onClick={handleExitClick} className="btn-exit" style={{ flex: 1 }}>
+              {isHistoryView ? 'BACK TO DASHBOARD' : 'EXIT'}
+            </button>
+            {!isHistoryView && (
+              <button onClick={handleRestartClick} className="btn-retry" style={{ flex: 1.5 }}>
+                RETRY SESSION
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Right Column: Global Score Orb & COACHING BUTTON */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative', zIndex: 1 }}>
           <ScoreOrb score={overall_score || 0} />
           
-          <button 
-            onClick={handleStartCoaching} 
-            style={{
-              marginTop: '40px',
-              padding: '16px 40px',
-              background: `linear-gradient(90deg, ${MAGENTA}, ${CYAN})`,
-              color: '#fff',
-              border: 'none',
-              borderRadius: '12px',
-              fontSize: '16px',
-              fontWeight: '900',
-              letterSpacing: '2px',
-              cursor: 'pointer',
-              boxShadow: `0 4px 20px ${MAGENTA}60`,
-              transition: 'all 0.3s',
-              textTransform: 'uppercase'
-            }}
-            onMouseOver={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = `0 8px 30px ${MAGENTA}80`; }}
-            onMouseOut={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = `0 4px 20px ${MAGENTA}60`; }}
-          >
-            Start Coaching Session
-          </button>
+          {!isHistoryView && (
+            <button 
+              onClick={handleStartCoaching} 
+              style={{
+                marginTop: '40px',
+                padding: '16px 40px',
+                background: `linear-gradient(90deg, ${MAGENTA}, ${CYAN})`,
+                color: '#fff',
+                border: 'none',
+                borderRadius: '12px',
+                fontSize: '16px',
+                fontWeight: '900',
+                letterSpacing: '2px',
+                cursor: 'pointer',
+                boxShadow: `0 4px 20px ${MAGENTA}60`,
+                transition: 'all 0.3s',
+                textTransform: 'uppercase'
+              }}
+              onMouseOver={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = `0 8px 30px ${MAGENTA}80`; }}
+              onMouseOut={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = `0 4px 20px ${MAGENTA}60`; }}
+            >
+              Start Coaching Session
+            </button>
+          )}
 
           <div className="scroll-indicator" style={{ marginTop: '30px', color: CYAN, fontSize: '14px', letterSpacing: '2px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'grab' }}>
             SCROLL RIGHT FOR DEEP DIVE <span style={{ fontSize: '24px' }}>→</span>
@@ -572,13 +591,10 @@ export default function FeedbackDisplay({ data, sessionId }) {
         </div>
       </section>
 
-      {/* =========================================
-          SCREEN 2: TECHNICAL EVALUATION
-      ========================================= */}
+      {/* Technical Evaluation Page */}
       {technical_report && (
         <section className="snap-screen screen-block">
 
-          {/* Header: Title/Text on Left, Vertical Score/Exit on Right */}
           <div className="screen-header" style={{ zIndex: 1, position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div style={{ flex: 1, paddingRight: '60px' }}>
               <h1 className="screen-title">Technical Evaluation</h1>
@@ -591,7 +607,6 @@ export default function FeedbackDisplay({ data, sessionId }) {
             </div>
           </div>
 
-          {/* Top Half: 2 Columns - Sphere | Metrics */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '50px', paddingBottom: '50px', zIndex: 1, position: 'relative' }}>
             <div style={{ background: '#11141d', padding: '40px', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
               <h3 style={{ color: '#a0aab2', letterSpacing: '3px', marginBottom: '20px', fontSize: '13px', fontWeight: '800' }}>SKILL CONSTELLATION</h3>
@@ -609,7 +624,6 @@ export default function FeedbackDisplay({ data, sessionId }) {
           </div>
 
 
-          {/* Bottom Half: Full Width Text Insights */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '40px', paddingBottom: '80px', zIndex: 1, position: 'relative' }}>
             <div>
               <h3 className="section-subtitle" style={{ color: CYAN }}>VERIFIED STRENGTHS</h3>
@@ -634,13 +648,10 @@ export default function FeedbackDisplay({ data, sessionId }) {
         </section>
       )}
 
-      {/* =========================================
-          SCREEN 3: BEHAVIORAL EVALUATION
-      ========================================= */}
+      {/* Behavioral & Communication page */}
       {behavioral_report && (
         <section className="snap-screen screen-block">
           
-          {/* Header: Title/Text on Left, Vertical Score/Exit on Right */}
           <div className="screen-header" style={{ zIndex: 1, position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div style={{ flex: 1, paddingRight: '60px' }}>
               <h1 className="screen-title">Behavioral & Communication</h1>
@@ -653,7 +664,6 @@ export default function FeedbackDisplay({ data, sessionId }) {
             </div>
           </div>
 
-          {/* Top Half: 2 Columns - Radar | Donuts + Bars */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '50px', paddingBottom: '50px', zIndex: 1, position: 'relative' }}>
             
             <div style={{ background: '#11141d', padding: '40px', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
@@ -679,7 +689,6 @@ export default function FeedbackDisplay({ data, sessionId }) {
             </div>
           </div>
 
-          {/* Bottom Half: Full Width Text Insights */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '40px', paddingBottom: '80px', zIndex: 1, position: 'relative' }}>
             <div>
               <h3 className="section-subtitle" style={{ color: CYAN }}>COMMUNICATION STRENGTHS</h3>
@@ -697,9 +706,7 @@ export default function FeedbackDisplay({ data, sessionId }) {
         </section>
       )}
 
-      {/* --- STRUCTURAL CSS SHIELD & ANIMATIONS --- */}
       <style>{`
-        /* Drag-to-Scroll Base Container */
         .horizontal-scroll-container {
           display: flex; flex-direction: row; width: 100vw; height: 100vh;
           overflow-x: auto; overflow-y: hidden;

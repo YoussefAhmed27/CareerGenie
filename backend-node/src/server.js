@@ -47,6 +47,7 @@ app.use(csrfProtect);
 app.use("/auth", authRoutes);
 app.use("/practice", practiceRoutes);
 app.use("/api/profile", profileRoutes);
+app.use("/api/interviews", require("./routes/interview"));
 
 app.get("/", (req, res) => {
     res.json({ message: "CareerGenie Backend Running" });

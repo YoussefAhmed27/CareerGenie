@@ -3,12 +3,14 @@ import io
 import asyncio
 import numpy as np
 import faiss
+import uuid
 import google.generativeai as genai
 from fastapi import FastAPI, HTTPException, UploadFile, File, WebSocket, WebSocketDisconnect, Query
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles  
+import boto3
+from botocore.client import Config
 from PyPDF2 import PdfReader
 from faster_whisper import WhisperModel
 from piper.voice import PiperVoice
@@ -48,6 +50,18 @@ FEEDBACK_MODEL  = "openai/gpt-oss-120b"
 STT_MODEL       = "whisper-large-v3-turbo"
 EMBEDDING_MODEL = "models/gemini-embedding-001"
 
+# MinIO Object Storage configuration (S3-compatible)
+s3_client = boto3.client(
+    's3',
+    endpoint_url='http://localhost:9000',
+    aws_access_key_id='admin',
+    aws_secret_access_key='password123',
+    config=Config(signature_version='s3v4'),
+    region_name='us-east-1'
+)
+BUCKET_NAME = "interview-recordings"
+
+
 app = FastAPI()
 
 app.add_middleware(
@@ -59,10 +73,6 @@ app.add_middleware(
 )
 
 SESSIONS = {}
-
-RECORDINGS_DIR = "recordings"
-os.makedirs(RECORDINGS_DIR, exist_ok=True)
-app.mount("/recordings", StaticFiles(directory=RECORDINGS_DIR), name="recordings")
 
 
 BEHAVIORAL_SYSTEM_PROMPT = """
@@ -418,18 +428,23 @@ def cached_rag_search(session_id: str, query: str) -> str:
         return ""
     session = SESSIONS[session_id]
 
-    cv_docs = session["cv_retriever"].invoke(query)
-    jd_docs = session["jd_retriever"].invoke(query)
-
-    cv_context = "\n".join([doc.page_content for doc in cv_docs])
-    jd_context = "\n".join([doc.page_content for doc in jd_docs])
+    cv_context = ""
+    jd_context = ""
+    
+    if session.get("cv_retriever"):
+        cv_docs = session["cv_retriever"].invoke(query)
+        cv_context = "\n".join([doc.page_content for doc in cv_docs])
+        
+    if session.get("jd_retriever"):
+        jd_docs = session["jd_retriever"].invoke(query)
+        jd_context = "\n".join([doc.page_content for doc in jd_docs])
 
     result = (
         f"=== CANDIDATE CV ===\n{cv_context}\n\n"
         f"=== JOB DESCRIPTION ===\n{jd_context}"
     )
     
-    if "transcript_retriever" in session:
+    if session.get("transcript_retriever"):
         transcript_docs = session["transcript_retriever"].invoke(query)
         transcript_context = "\n".join([doc.page_content for doc in transcript_docs])
         if transcript_context.strip():
@@ -467,7 +482,7 @@ async def start_session(request: SessionStartRequest):
     cv_retriever = cv_vectorstore.as_retriever(search_type="mmr", search_kwargs={'k': 3, 'fetch_k': 8})
     jd_retriever = jd_vectorstore.as_retriever(search_type="mmr", search_kwargs={'k': 3, 'fetch_k': 8})
 
-    session_id = f"session_{len(SESSIONS) + 1}"
+    session_id = f"session_{uuid.uuid4().hex}"
     
     SESSIONS[session_id] = {
         "cv_retriever": cv_retriever,
@@ -499,7 +514,7 @@ async def restart_session(old_session_id: str):
     cv_retriever = cv_vectorstore.as_retriever(search_type="mmr", search_kwargs={'k': 3, 'fetch_k': 8})
     jd_retriever = jd_vectorstore.as_retriever(search_type="mmr", search_kwargs={'k': 3, 'fetch_k': 8})
 
-    new_session_id = f"session_{len(SESSIONS) + 1}"
+    new_session_id = f"session_{uuid.uuid4().hex}"
     
     SESSIONS[new_session_id] = {
         "cv_retriever": cv_retriever,
@@ -513,19 +528,32 @@ async def restart_session(old_session_id: str):
     
     return {"session_id": new_session_id}
 
+
 @app.post("/upload_recording/{session_id}")
 async def upload_recording(session_id: str, file: UploadFile = File(...)):
-    file_path = f"{RECORDINGS_DIR}/{session_id}.webm"
+    object_key = f"{session_id}.webm"
     
-    with open(file_path, "wb") as f:
-        f.write(await file.read())
+    try:
+        # Read the video file bytes
+        file_bytes = await file.read()
         
-    print(f"Recording saved for {session_id} at {file_path}")
-    
-    return {
-        "status": "success", 
-        "video_url": f"http://127.0.0.1:8000/recordings/{session_id}.webm"
-    }
+        s3_client.put_object(
+            Bucket=BUCKET_NAME,
+            Key=object_key,
+            Body=file_bytes,
+            ContentType=file.content_type or 'video/webm'
+        )
+        
+        print(f"Recording successfully uploaded to Cloud Storage (MinIO): {object_key}")
+        
+        return {
+            "status": "success", 
+            "video_object_key": object_key
+        }
+        
+    except Exception as e:
+        print(f"MinIO Upload Error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to upload recording to cloud storage.")
 
 @app.post("/execute_code", response_model=CodeExecutionResponse)
 async def execute_code(request: CodeExecutionRequest):
@@ -888,13 +916,13 @@ async def get_feedback(request: FeedbackRequest):
         technical_result = None
         overall_score = 0.0
 
-        # Behavioral mode skips the technical grading completely!
+        # Behavioral mode --> single agent, only behavioral evaluation
         if mode == "behavioral":
             behavioral_result = await call_llm(BEHAVIORAL_SYSTEM_PROMPT, behavioral_prompt)
             overall_score = float(behavioral_result.get("top_section", {}).get("behavioral_score", 5.0))
             
         else: 
-            # This handles BOTH "technical" and "comprehensive" modes (both get both reports)
+            # tech/comprehensive modes --> dual agent
             behavioral_task = call_llm(BEHAVIORAL_SYSTEM_PROMPT, behavioral_prompt)
             technical_task = call_llm(formatted_tech_sys_prompt, technical_prompt)
             
@@ -905,11 +933,24 @@ async def get_feedback(request: FeedbackRequest):
             
             overall_score = round((b_score + t_score) / 2, 1)
 
+        # Generate secure MinIO link
+        try:
+            video_url = s3_client.generate_presigned_url(
+                'get_object',
+                Params={'Bucket': BUCKET_NAME, 'Key': f"{session_id}.webm"},
+                ExpiresIn=3600
+            )
+        except Exception as e:
+            print(f"Could not generate presigned URL: {e}")
+            video_url = None
+
         final_report = {
             "overall_score": overall_score,
             "behavioral_report": behavioral_result,
             "technical_report": technical_result,
-            "mode": mode
+            "mode": mode,
+            "video_url": video_url,
+            "job_role": job_role
         }
 
         SESSIONS[session_id]["last_feedback"] = final_report
