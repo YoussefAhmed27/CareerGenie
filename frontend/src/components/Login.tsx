@@ -9,7 +9,8 @@ declare global {
 }
 
 const Login: React.FC = () => {
-    console.log(import.meta.env.VITE_GOOGLE_CLIENT_ID);
+    // 1. The Base URL is defined here
+    const NODE_BASE_URL = import.meta.env.VITE_NODE_URL || 'http://localhost:5000';
 
     const [isLoginMode, setIsLoginMode] = useState<boolean>(true);
     const [role, setRole] = useState<string>("candidate");
@@ -19,7 +20,8 @@ const Login: React.FC = () => {
 
     const handleGoogleResponse = async (response: any) => {
         try {
-            const csrfResponse = await fetch("/auth/csrf", {
+            // 2. Fetch updated with Base URL
+            const csrfResponse = await fetch(`${NODE_BASE_URL}/auth/csrf`, {
                 method: "GET",
                 credentials: "include"
             });
@@ -31,7 +33,8 @@ const Login: React.FC = () => {
             const csrfData = await csrfResponse.json();
             const csrfToken = csrfData.csrfToken;
 
-            const res = await fetch("/auth/google", {
+            // 3. Fetch updated with Base URL
+            const res = await fetch(`${NODE_BASE_URL}/auth/google`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -136,7 +139,8 @@ const Login: React.FC = () => {
         }
 
         try {
-            const csrfResponse = await fetch("/auth/csrf", {
+            // 4. Fetch updated with Base URL
+            const csrfResponse = await fetch(`${NODE_BASE_URL}/auth/csrf`, {
                 method: "GET",
                 credentials: "include"
             });
@@ -151,7 +155,8 @@ const Login: React.FC = () => {
                 ? { email, password }
                 : { full_name: name, email, password, phone, current_role: role };
 
-            const authResponse = await fetch(endpoint, {
+            // 5. Fetch updated with Base URL
+            const authResponse = await fetch(`${NODE_BASE_URL}${endpoint}`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -168,7 +173,8 @@ const Login: React.FC = () => {
             }
 
             if (!isLoginMode) {
-                const loginRes = await fetch("/auth/login", {
+                // 6. Fetch updated with Base URL
+                const loginRes = await fetch(`${NODE_BASE_URL}/auth/login`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
