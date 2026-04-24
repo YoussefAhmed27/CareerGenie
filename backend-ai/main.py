@@ -38,7 +38,7 @@ DEEPGRAM_API_KEY = os.getenv("DEEPGRAM_API_KEY")
 if not GROQ_API_KEY or not GEMINI_API_KEY or not DEEPGRAM_API_KEY:
     raise RuntimeError("Missing API Keys in .env file (Groq, Gemini, or Deepgram).")
 
-USE_OPENAI = True
+USE_OPENAI = False
 
 async_groq_client = AsyncGroq(api_key=GROQ_API_KEY)
 genai.configure(api_key=GEMINI_API_KEY)

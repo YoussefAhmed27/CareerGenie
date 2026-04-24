@@ -14,9 +14,9 @@ const { csrfProtect } = require("./middleware/csrf");
 
 const app = express();
 
-const allowedOrigins = [
-    process.env.CLIENT_ORIGIN
-].filter(Boolean);
+const allowedOrigins = process.env.CLIENT_ORIGIN 
+    ? process.env.CLIENT_ORIGIN.split(',') 
+    : ['http://localhost:5173'];
 
 app.use(helmet({
     crossOriginResourcePolicy: false

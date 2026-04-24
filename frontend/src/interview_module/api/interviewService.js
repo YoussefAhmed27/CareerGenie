@@ -1,14 +1,17 @@
 import axios from 'axios';
 
+const AI_BASE_URL = import.meta.env.VITE_AI_URL || 'http://127.0.0.1:8000';
+const NODE_BASE_URL = import.meta.env.VITE_NODE_URL || 'http://localhost:5000';
+
 const API_CLIENT = axios.create({
-  baseURL: 'http://127.0.0.1:8000', 
+  baseURL: AI_BASE_URL,
   headers: {
     'Content-Type': 'application/json', 
   },
 });
 
 const AUTH_API_CLIENT = axios.create({
-  baseURL: 'http://localhost:5000/api', 
+  baseURL: `${NODE_BASE_URL}/api`, 
 });
 
 export const getExistingCv = async () => {
@@ -154,11 +157,11 @@ export const saveInterviewResult = async (payload) => {
   try {
     const token = localStorage.getItem('token');
 
-    const csrfRes = await fetch('/auth/csrf', { credentials: 'include' });
+    const csrfRes = await fetch(`${NODE_BASE_URL}/auth/csrf`, { credentials: 'include' });
     if (!csrfRes.ok) throw new Error("Could not fetch CSRF token");
     const csrfData = await csrfRes.json();
 
-    const response = await fetch('http://localhost:5000/api/interviews', {
+    const response = await fetch(`${NODE_BASE_URL}/api/interviews`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -184,7 +187,7 @@ export const saveInterviewResult = async (payload) => {
 export const getInterviewHistory = async () => {
   try {
     const token = localStorage.getItem('token');
-    const response = await fetch('http://localhost:5000/api/interviews', {
+    const response = await fetch(`${NODE_BASE_URL}/api/interviews`, {
       method: 'GET',
       headers: { 'Authorization': `Bearer ${token}` },
       credentials: 'include'
@@ -200,7 +203,7 @@ export const getInterviewHistory = async () => {
 export const getInterviewDetail = async (id) => {
   try {
     const token = localStorage.getItem('token');
-    const response = await fetch(`http://localhost:5000/api/interviews/${id}`, {
+    const response = await fetch(`${NODE_BASE_URL}/api/interviews/${id}`, {
       method: 'GET',
       headers: { 'Authorization': `Bearer ${token}` },
       credentials: 'include'
@@ -216,11 +219,11 @@ export const getInterviewDetail = async (id) => {
 export const deleteInterview = async (id) => {
   try {
     const token = localStorage.getItem('token');
-    const csrfRes = await fetch('/auth/csrf', { credentials: 'include' });
+    const csrfRes = await fetch(`${NODE_BASE_URL}/auth/csrf`, { credentials: 'include' });
     if (!csrfRes.ok) throw new Error("Could not fetch CSRF token");
     const csrfData = await csrfRes.json();
 
-    const response = await fetch(`http://localhost:5000/api/interviews/${id}`, {
+    const response = await fetch(`${NODE_BASE_URL}/api/interviews/${id}`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -248,7 +251,7 @@ export const getAnalyticsData = async (timeframe, role) => {
     if (timeframe) params.append('timeframe', timeframe);
     if (role) params.append('role', role);
 
-    const response = await fetch(`http://localhost:5000/api/interviews/analytics?${params.toString()}`, {
+    const response = await fetch(`${NODE_BASE_URL}/api/interviews/analytics?${params.toString()}`, {
       method: 'GET',
       headers: { 'Authorization': `Bearer ${token}` },
       credentials: 'include'
