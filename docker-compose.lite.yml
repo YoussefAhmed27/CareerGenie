@@ -47,19 +47,6 @@ services:
       exit 0;
       "
 
-  piston:
-    image: ghcr.io/engineer-man/piston
-    container_name: careergenie-piston
-    restart: always
-    privileged: true
-    ports:
-      - "2000:2000"
-    volumes:
-      - piston_data:/piston 
-    tmpfs:
-      - /tmp:exec
-
-
   node-backend:
     build: ./backend-node
     container_name: careergenie-node
@@ -80,47 +67,6 @@ services:
       - ./backend-node:/app
       - /app/node_modules
 
-  fastapi-orchestrator:
-    build: ./backend-ai
-    container_name: careergenie-fastapi
-    env_file:
-      - .env
-    environment:
-      - DB_HOST=db
-      - DB_USER=${DB_USER}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - DB_NAME=${DB_NAME}
-      - MINIO_ENDPOINT_INTERNAL=http://minio:9000
-      - MINIO_ENDPOINT_PUBLIC=http://localhost:9000
-      - PISTON_API_URL=http://piston:2000/api/v2 
-    ports:
-      - "8000:8000"
-    depends_on:
-      - db
-      - minio
-      - piston
-    volumes:
-      - ./backend-ai:/app
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
-  nginx:
-    image: nginx:alpine
-    container_name: careergenie-gateway
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-    ports:
-      - "8080:80"
-    depends_on:
-      - node-backend
-      - fastapi-orchestrator
-
 volumes:
   pgdata:
   minio_data:
-  piston_data:
-    external: true

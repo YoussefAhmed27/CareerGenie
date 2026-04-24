@@ -1,5 +1,6 @@
 const pool = require("../db");
-const s3Client = require("../utils/s3Client");
+// Import both clients
+const { s3Internal, s3External } = require("../utils/s3Client");
 const { GetObjectCommand, DeleteObjectCommand } = require("@aws-sdk/client-s3");
 const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 
@@ -146,7 +147,8 @@ exports.getInterviewById = async (req, res, next) => {
                 Bucket: "interview-recordings",
                 Key: session.video_object_key,
             });
-            video_url = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+            // USE EXTERNAL CLIENT FOR THE BROWSER URL
+            video_url = await getSignedUrl(s3External, command, { expiresIn: 3600 });
         }
 
         res.json({
@@ -193,7 +195,8 @@ exports.deleteInterview = async (req, res, next) => {
                 Bucket: "interview-recordings",
                 Key: video_object_key,
             });
-            await s3Client.send(command);
+            // USE INTERNAL CLIENT TO EXECUTE THE DELETE
+            await s3Internal.send(command);
         }
 
         res.json({ message: "Interview and associated recording deleted successfully" });

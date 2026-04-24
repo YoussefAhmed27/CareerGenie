@@ -38,7 +38,7 @@ DEEPGRAM_API_KEY = os.getenv("DEEPGRAM_API_KEY")
 if not GROQ_API_KEY or not GEMINI_API_KEY or not DEEPGRAM_API_KEY:
     raise RuntimeError("Missing API Keys in .env file (Groq, Gemini, or Deepgram).")
 
-USE_OPENAI = False
+USE_OPENAI = True
 
 async_groq_client = AsyncGroq(api_key=GROQ_API_KEY)
 genai.configure(api_key=GEMINI_API_KEY)
@@ -50,16 +50,34 @@ FEEDBACK_MODEL  = "openai/gpt-oss-120b"
 STT_MODEL       = "whisper-large-v3-turbo"
 EMBEDDING_MODEL = "models/gemini-embedding-001"
 
-# MinIO Object Storage configuration (S3-compatible)
-s3_client = boto3.client(
+# ==========================================
+# PRODUCTION MINIO SETUP (DUAL CLIENTS)
+# ==========================================
+
+# 1. Internal Client (For FastAPI to upload over Docker Network)
+INTERNAL_ENDPOINT = os.getenv("MINIO_ENDPOINT_INTERNAL", "http://minio:9000")
+s3_internal = boto3.client(
     's3',
-    endpoint_url='http://localhost:9000',
+    endpoint_url=INTERNAL_ENDPOINT,
     aws_access_key_id='admin',
     aws_secret_access_key='password123',
     config=Config(signature_version='s3v4'),
     region_name='us-east-1'
 )
+
+# 2. External Client (For generating mathematically valid signatures for the Browser)
+PUBLIC_ENDPOINT = os.getenv("MINIO_ENDPOINT_PUBLIC", "http://localhost:9000")
+s3_external = boto3.client(
+    's3',
+    endpoint_url=PUBLIC_ENDPOINT,
+    aws_access_key_id='admin',
+    aws_secret_access_key='password123',
+    config=Config(signature_version='s3v4'),
+    region_name='us-east-1'
+)
+
 BUCKET_NAME = "interview-recordings"
+# ==========================================
 
 
 app = FastAPI()
@@ -407,7 +425,7 @@ class CodeExecutionResponse(BaseModel):
     exit_code: int
     compile_output: str = ""
 
-PISTON_API_URL = "http://localhost:2000/api/v2"
+PISTON_API_URL = "http://piston:2000/api/v2"
 
 def extract_text_from_pdf(pdf_file_path_or_bytes: bytes) -> str:
     text = ""
@@ -537,7 +555,8 @@ async def upload_recording(session_id: str, file: UploadFile = File(...)):
         # Read the video file bytes
         file_bytes = await file.read()
         
-        s3_client.put_object(
+        # USE THE INTERNAL CLIENT FOR UPLOADS
+        s3_internal.put_object(
             Bucket=BUCKET_NAME,
             Key=object_key,
             Body=file_bytes,
@@ -935,10 +954,11 @@ async def get_feedback(request: FeedbackRequest):
 
         # Generate secure MinIO link
         try:
-            video_url = s3_client.generate_presigned_url(
+            # USE THE EXTERNAL CLIENT TO GENERATE THE URL
+            video_url = s3_external.generate_presigned_url(
                 'get_object',
                 Params={'Bucket': BUCKET_NAME, 'Key': f"{session_id}.webm"},
-                ExpiresIn=3600
+                ExpiresIn=7200
             )
         except Exception as e:
             print(f"Could not generate presigned URL: {e}")
