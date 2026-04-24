@@ -18,7 +18,6 @@ import Chat from "./interview_module/components/Chat";
 // @ts-ignore
 import FeedbackDisplay from "./interview_module/components/FeedbackDisplay";
 
-
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const token = localStorage.getItem('token'); 
   return token ? <>{children}</> : <Navigate to="/login" />; 
@@ -38,12 +37,14 @@ const App = () => {
     hasFetched.current = true;
 
     const attemptAutoLogin = async () => {
+      const NODE_BASE_URL = import.meta.env.VITE_NODE_URL || 'http://localhost:5000';
+
       try {
-        const csrfRes = await fetch('/auth/csrf', { credentials: 'include' });
+        const csrfRes = await fetch(`${NODE_BASE_URL}/auth/csrf`, { credentials: 'include' });
         if (!csrfRes.ok) throw new Error("Could not fetch CSRF token");
         const { csrfToken } = await csrfRes.json();
 
-        const response = await fetch('/auth/refresh', {
+        const response = await fetch(`${NODE_BASE_URL}/auth/refresh`, {
           method: 'POST',
           headers: { 
             'Content-Type': 'application/json',

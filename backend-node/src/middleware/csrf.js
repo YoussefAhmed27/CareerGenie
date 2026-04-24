@@ -10,8 +10,9 @@ function setCsrfCookie(res, token) {
 
     res.cookie("csrf_token", token, {
         httpOnly: false,
-        sameSite: "lax",
-        secure: isProd
+        sameSite: isProd ? "none" : "lax",
+        secure: isProd,
+        path: "/"
     });
 }
 
@@ -19,14 +20,12 @@ function generateToken() {
     return crypto.randomBytes(32).toString("hex");
 }
 
-// Issues a CSRF token cookie (call this endpoint before login/logout/refresh in a browser)
 function issueCsrf(req, res) {
     const token = generateToken();
     setCsrfCookie(res, token);
     res.json({ csrfToken: token });
 }
 
-// Protects all state-changing requests
 function csrfProtect(req, res, next) {
     const method = req.method.toUpperCase();
 
