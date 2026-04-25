@@ -25,10 +25,12 @@ const Navbar = () => {
 
   const handleLogout = async () => {
     try {
-      const csrfRes = await fetch('/auth/csrf', { credentials: 'include' });
+      const NODE_BASE_URL = import.meta.env.VITE_NODE_URL || 'http://localhost:5000';
+
+      const csrfRes = await fetch(`${NODE_BASE_URL}/auth/csrf`, { credentials: 'include' });
       if (csrfRes.ok) {
         const { csrfToken } = await csrfRes.json();
-        await fetch('/auth/logout', {
+        await fetch(`${NODE_BASE_URL}/auth/logout`, {
           method: 'POST',
           headers: { 'X-CSRF-Token': csrfToken },
           credentials: 'include'

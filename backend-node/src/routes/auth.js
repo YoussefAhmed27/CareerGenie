@@ -60,13 +60,11 @@ function signRefreshToken(candidateId) {
 }
 
 function refreshCookieOptions() {
-    const isProd = process.env.NODE_ENV === "production";
-
     return {
         httpOnly: true,
-        sameSite: "lax",
-        secure: isProd,
-        path: "/auth/refresh"
+        sameSite: "none", // Forces cross-origin allowance for Vercel -> Cloudflare
+        secure: true,     // Required for 'none'
+        path: "/"         // THE SILVER BULLET: Allows /logout to see and kill the cookie
     };
 }
 
