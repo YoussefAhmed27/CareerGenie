@@ -16,6 +16,8 @@ type ProfileData = {
 };
 
 const Profile: React.FC = () => {
+    const NODE_BASE_URL = import.meta.env.VITE_NODE_URL || 'http://localhost:5000';
+
     const photoInputRef = useRef<HTMLInputElement | null>(null);
     const cvInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -47,7 +49,7 @@ const Profile: React.FC = () => {
             try {
                 const token = localStorage.getItem("token");
 
-                const res = await fetch("/api/profile/me", {
+                const res = await fetch(`${NODE_BASE_URL}/api/profile/me`, {
                     headers: {
                         Authorization: `Bearer ${token}`
                     },
@@ -92,7 +94,7 @@ const Profile: React.FC = () => {
                 if (!token) return;
 
                 if (profile.photo_filename) {
-                    const photoRes = await fetch("/api/profile/photo", {
+                    const photoRes = await fetch(`${NODE_BASE_URL}/api/profile/photo`, {
                         headers: {
                             Authorization: `Bearer ${token}`
                         },
@@ -107,7 +109,7 @@ const Profile: React.FC = () => {
                 }
 
                 if (profile.cv_filename) {
-                    const cvRes = await fetch("/api/profile/cv", {
+                    const cvRes = await fetch(`${NODE_BASE_URL}/api/profile/cv`, {
                         headers: {
                             Authorization: `Bearer ${token}`
                         },
@@ -148,14 +150,14 @@ const Profile: React.FC = () => {
         try {
             const token = localStorage.getItem("token");
 
-            const csrfRes = await fetch("/auth/csrf", {
+            const csrfRes = await fetch(`${NODE_BASE_URL}/auth/csrf`, {
                 method: "GET",
                 credentials: "include"
             });
 
             const { csrfToken } = await csrfRes.json();
 
-            const res = await fetch("/api/profile/me", {
+            const res = await fetch(`${NODE_BASE_URL}/api/profile/me`, {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",
@@ -196,7 +198,7 @@ const Profile: React.FC = () => {
         try {
             const token = localStorage.getItem("token");
 
-            const csrfRes = await fetch("/auth/csrf", {
+            const csrfRes = await fetch(`${NODE_BASE_URL}/auth/csrf`, {
                 method: "GET",
                 credentials: "include"
             });
@@ -206,7 +208,7 @@ const Profile: React.FC = () => {
             const formData = new FormData();
             formData.append("photo", file);
 
-            const res = await fetch("/api/profile/upload-photo", {
+            const res = await fetch(`${NODE_BASE_URL}/api/profile/upload-photo`, {
                 method: "POST",
                 headers: {
                     "X-CSRF-Token": csrfToken,
@@ -244,7 +246,7 @@ const Profile: React.FC = () => {
         try {
             const token = localStorage.getItem("token");
 
-            const csrfRes = await fetch("/auth/csrf", {
+            const csrfRes = await fetch(`${NODE_BASE_URL}/auth/csrf`, {
                 method: "GET",
                 credentials: "include"
             });
@@ -254,7 +256,7 @@ const Profile: React.FC = () => {
             const formData = new FormData();
             formData.append("cv", file);
 
-            const res = await fetch("/api/profile/upload-cv", {
+            const res = await fetch(`${NODE_BASE_URL}/api/profile/upload-cv`, {
                 method: "POST",
                 headers: {
                     "X-CSRF-Token": csrfToken,
@@ -290,13 +292,13 @@ const Profile: React.FC = () => {
         
         try {
             const token = localStorage.getItem("token");
-            const csrfRes = await fetch("/auth/csrf", {
+            const csrfRes = await fetch(`${NODE_BASE_URL}/auth/csrf`, {
                 method: "GET",
                 credentials: "include"
             });
             const { csrfToken } = await csrfRes.json();
 
-            const res = await fetch("/api/profile/me", {
+            const res = await fetch(`${NODE_BASE_URL}/api/profile/me`, {
                 method: "DELETE",
                 headers: {
                     "X-CSRF-Token": csrfToken,

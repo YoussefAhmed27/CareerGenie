@@ -1,0 +1,14 @@
+==================================================
+CAREERGENIE Q&A HR REPORT: SESSION session_33ee2637414642f58962b016b9cc064f
+==================================================
+
+Question 1 (1s - 12s)
+Transcript: Hey. I am Youssef, junior AI engineer with expertise in computer vision and NLP.
+Metrics: {'Interview Score': 5.3, 'Answer Score': 8.1, 'Speaking Skills': 8.2, 'Confidence': 7.4, 'Facial Expression': 4.5, 'Overall Perf': 7.3, 'Openness': 4.6, 'Conscientiousness': 6.6, 'Extraversion': 4.5, 'Agreeableness': 5.6, 'Neuroticism': 5.8, 'Overall Personality': 4.5}
+Speech Analytics: {'Pacing (WPM)': 78.0, 'Articulation (Syll/sec)': 4.7, 'Active Speaking (sec)': 6.4, 'Response Latency (sec)': 0.0, 'Silence Ratio (%)': 40.3, 'Longest Pause (sec)': 1.5, 'Avg Pause (sec)': 0.29, 'Expressiveness (Pitch Var)': 10.73, 'Volume Dynamics': 84.88, 'Vocal Tremor (Jitter)': 1.913, 'Filler Word Ratio (%)': 0.0}
+--------------------------------------------------
+Question 2 (14s - 17s)
+Transcript: [SILENCE]
+Metrics: {'Interview Score': 6.9, 'Answer Score': 9.8, 'Speaking Skills': 9.3, 'Confidence': 8.8, 'Facial Expression': 6.1, 'Overall Perf': 8.7, 'Openness': 5.6, 'Conscientiousness': 7.7, 'Extraversion': 5.6, 'Agreeableness': 7.0, 'Neuroticism': 6.2, 'Overall Personality': 6.1}
+Speech Analytics: {'Pacing (WPM)': 17.8, 'Articulation (Syll/sec)': 1.2, 'Active Speaking (sec)': 2.5, 'Response Latency (sec)': 0.0, 'Silence Ratio (%)': 26.5, 'Longest Pause (sec)': 0.15, 'Avg Pause (sec)': 0.1, 'Expressiveness (Pitch Var)': 12.88, 'Volume Dynamics': 68.22, 'Vocal Tremor (Jitter)': 2.536, 'Filler Word Ratio (%)': 0.0}
+--------------------------------------------------
