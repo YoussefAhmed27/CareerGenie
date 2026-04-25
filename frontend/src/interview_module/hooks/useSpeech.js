@@ -3,6 +3,14 @@ import { getSharedMediaStream } from './mediaHub';
 import { textToVisemes } from '../utils/visemeMapper';
 import { uploadInterviewRecording } from '../api/interviewService';
 
+// --- ADDED DYNAMIC URLS HERE ---
+const AI_BASE_URL = import.meta.env.VITE_AI_URL || 'http://127.0.0.1:8000';
+const wsProtocol = AI_BASE_URL.startsWith('https') ? 'wss' : 'ws';
+const wsHost = AI_BASE_URL.replace(/^https?:\/\//, '');
+
+const MER_BASE_URL = import.meta.env.VITE_MER_URL || 'http://127.0.0.1:8002';
+// -------------------------------
+
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
 const globalAnalyser = audioCtx.createAnalyser();
 globalAnalyser.smoothingTimeConstant = 0.1;
@@ -81,8 +89,8 @@ export const useSpeech = (sessionId, isAvatarReady = false, mode = 'interview') 
   useEffect(() => {
     if (!sessionId || !isAvatarReady) return;
 
-    // Pass the mode param to backend
-    const ws = new WebSocket(`ws://127.0.0.1:8000/ws/interview/${sessionId}?mode=${mode}`);
+    // --- UPDATED WEBSOCKET URL HERE ---
+    const ws = new WebSocket(`${wsProtocol}://${wsHost}/ws/interview/${sessionId}?mode=${mode}`);
     ws.binaryType = 'arraybuffer';
 
     ws.onmessage = (event) => {
@@ -281,7 +289,8 @@ export const useSpeech = (sessionId, isAvatarReady = false, mode = 'interview') 
             formData.append('qa_intervals', JSON.stringify(qaIntervalsRef.current));
             
             try {
-                const response = await fetch('http://127.0.0.1:8002/api/analyze_interview', {
+                // --- UPDATED MER URL HERE ---
+                const response = await fetch(`${MER_BASE_URL}/api/analyze_interview`, {
                     method: 'POST',
                     body: formData,
                 });

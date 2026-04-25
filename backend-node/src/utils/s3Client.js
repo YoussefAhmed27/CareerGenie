@@ -19,7 +19,7 @@ const s3External = new S3Client({
         accessKeyId: "admin",
         secretAccessKey: "password123",
     },
-    endpoint: "http://localhost:9000",
+    endpoint: process.env.EXTERNAL_MINIO_URL || "http://localhost:9000",
     forcePathStyle: true, 
 });
 
