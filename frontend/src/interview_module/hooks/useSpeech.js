@@ -254,7 +254,11 @@ export const useSpeech = (sessionId, isAvatarReady = false, mode = 'interview') 
       if (!mediaRecorderRef.current && mode !== 'coaching') {
         recordedChunksRef.current = [];
         
-        const recorder = new MediaRecorder(mixedStream, { mimeType: 'video/webm' });
+        const options = { 
+          mimeType: 'video/webm;codecs=vp8,opus',
+          videoBitsPerSecond: 250000
+        };
+        const recorder = new MediaRecorder(mixedStream, options);
         
         recordingStartTimeRef.current = Date.now();
         

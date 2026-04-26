@@ -38,7 +38,7 @@ DEEPGRAM_API_KEY = os.getenv("DEEPGRAM_API_KEY")
 if not GROQ_API_KEY or not GEMINI_API_KEY or not DEEPGRAM_API_KEY:
     raise RuntimeError("Missing API Keys in .env file (Groq, Gemini, or Deepgram).")
 
-USE_OPENAI = False
+USE_OPENAI = True
 
 async_groq_client = AsyncGroq(api_key=GROQ_API_KEY)
 genai.configure(api_key=GEMINI_API_KEY)
@@ -358,7 +358,7 @@ Determine the nature of the {job_role}:
 PHASE 4: The Hard Stop (Conclusion)
 Trigger this IMMEDIATELY after the candidate answers your follow-up to the Phase 3 exercise. 
 YOU ARE STRICTLY FORBIDDEN FROM ASKING ANY FURTHER QUESTIONS. Do not probe. Do not ask "Do you have any questions for me?" 
-Provide a brief, one-sentence objective critique of their exercise. Offer a professional sign-off ("Good talking shop with you.").
+Provide a brief, one-sentence objective critique of their exercise. Offer a professional sign-off ("That's all, Thank you for your time today!").
 Append exactly: [INTERVIEW_COMPLETE]
 
 ═══════════════════════════════════════════════════════
