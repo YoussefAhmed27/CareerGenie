@@ -390,6 +390,7 @@
 }
 
 
+/* --- RESPONSIVE CHAT LAYOUT --- */
 .chat-main-container {
   display: flex;
   width: 100%;
@@ -432,53 +433,46 @@
   z-index: 20;
 }
 
+/* NATIVE DESKTOP WEBCAM: 
+   This wrapper is completely empty on desktop so your 
+   webcam goes back to working exactly how it used to. */
 .webcam-wrapper {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 10;
-  pointer-events: none; 
+  position: static;
 }
 
-.webcam-wrapper > div {
-  pointer-events: auto; 
-}
-
+/* 📱 MOBILE ADJUSTMENTS */
 @media (max-width: 768px) {
-  .chat-main-container {
-    flex-direction: column; 
-  }
   
-  .chat-left-panel {
-    height: 55vh; 
-    flex: none !important; 
-  }
-  
+  /* 1. COMPLETELY HIDE THE TRANSCRIPT */
   .chat-right-panel {
-    width: 100%; 
-    height: 45vh; 
-    border-left: none;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    display: none !important; 
   }
-
   
-  .webcam-wrapper {
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    width: 320px; 
-    height: 240px;
-    transform-origin: top right;
-    transform: scale(0.45);
-    z-index: 100;
-    border-radius: 20px;
-    overflow: hidden;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.9);
+  /* 2. MAKE AVATAR FULL SCREEN */
+  .chat-left-panel {
+    flex: 1 !important; 
+    height: 100% !important;
   }
 
-  .chat-center-control { bottom: 20px; }
-  .chat-right-control { bottom: 20px; right: 20px; }
+  /* 3. TINY WEBCAM AT THE TOP RIGHT */
+  .webcam-wrapper {
+    position: absolute !important;
+    top: 15px !important;
+    right: 15px !important;
+    width: 320px !important; /* Keeps the internal UI from breaking */
+    height: 240px !important;
+    transform: scale(0.3) !important; /* Shrinks the whole thing to 30% (Super Tiny) */
+    transform-origin: top right !important;
+    z-index: 9999 !important;
+  }
+
+  .chat-center-control { 
+    bottom: 20px; 
+  }
+  .chat-right-control { 
+    bottom: 20px; 
+    right: 20px; 
+  }
 }
 
 /* =========================================================
