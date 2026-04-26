@@ -388,3 +388,80 @@
   .setup-card h2 { font-size: 1.5rem; }
   .setup-card p.subtitle { font-size: 0.8rem; }
 }
+
+.chat-main-container {
+  display: flex;
+  width: 100%;
+  height: calc(100vh - 80px);
+  margin-top: 80px;
+  background: #050814;
+}
+
+.chat-left-panel {
+  position: relative;
+  background: transparent;
+  overflow: hidden;
+  transition: flex 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.chat-right-panel {
+  width: 400px;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
+}
+
+.chat-center-control {
+  position: absolute;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+}
+
+.chat-right-control {
+  position: absolute;
+  bottom: 30px;
+  right: 30px;
+  z-index: 20;
+}
+
+.webcam-wrapper {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 10;
+  transition: all 0.3s ease;
+}
+
+@media (max-width: 768px) {
+  .chat-left-panel {
+    flex: 1 !important;
+  }
+  
+  .chat-right-panel {
+    display: none !important;
+  }
+
+  .webcam-wrapper {
+    width: 100px !important;
+    height: 140px !important;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+  }
+  
+  .chat-center-control {
+    bottom: 40px;
+  }
+  
+  .chat-right-control {
+    bottom: 40px;
+    right: 20px;
+  }
+}

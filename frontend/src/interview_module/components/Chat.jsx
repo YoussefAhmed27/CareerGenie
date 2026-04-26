@@ -10,7 +10,6 @@ import AnalysisLoader from './AnalysisLoader';
 import '../interview-styles.css'; 
 
 export default function Chat() {
-  
   const navigate = useNavigate();
   
   const [searchParams] = useSearchParams();
@@ -39,9 +38,9 @@ export default function Chat() {
     setIsInterviewComplete  
   } = useSpeech(sessionId, isAvatarReady, mode);
 
-  const [feedbackData, setFeedbackData]           = useState(null);
+  const [feedbackData, setFeedbackData] = useState(null);
   const [isFeedbackLoading, setIsFeedbackLoading] = useState(false);
-  const [feedbackError, setFeedbackError]         = useState(null);
+  const [feedbackError, setFeedbackError] = useState(null);
   const hasTriggeredEndRef = useRef(false);
 
   const messagesEndRef = useRef(null);
@@ -83,32 +82,39 @@ export default function Chat() {
 
     setIsFeedbackLoading(true);
     setFeedbackError(null);
-
-    setTimeout(async () => {
-      try {
-        const storedMerData = JSON.parse(localStorage.getItem(`mer_report_${sessionId}`) || "[]");
-        
-        const response = await fetch('http://127.0.0.1:8000/get_feedback', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                session_id: sessionId,
-                mer_data: storedMerData
-            })
-        });
-        
-        if (!response.ok) throw new Error(`Backend Error: ${response.status}`);
-        
-        const data = await response.json();
-        setFeedbackData(data);
-      } catch (error) {
-        console.error("Feedback error:", error);
-        setFeedbackError(error.message); 
-      } finally {
-        setIsFeedbackLoading(false);
-      }
-    }, 100); 
   };
+
+  useEffect(() => {
+    if (isFeedbackLoading && isVideoUploaded && !feedbackData && !feedbackError) {
+      const fetchFeedback = async () => {
+        try {
+          const storedMerData = JSON.parse(localStorage.getItem(`mer_report_${sessionId}`) || "[]");
+          const AI_BASE_URL = import.meta.env.VITE_AI_URL || 'https://ai.careersgenie.tech';
+          
+          const response = await fetch(`${AI_BASE_URL}/get_feedback`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                  session_id: sessionId,
+                  mer_data: storedMerData
+              })
+          });
+          
+          if (!response.ok) throw new Error(`Backend Error: ${response.status}`);
+          
+          const data = await response.json();
+          setFeedbackData(data);
+        } catch (error) {
+          console.error("Feedback error:", error);
+          setFeedbackError(error.message); 
+        } finally {
+          setIsFeedbackLoading(false);
+        }
+      };
+
+      fetchFeedback();
+    }
+  }, [isFeedbackLoading, isVideoUploaded, sessionId, feedbackData, feedbackError]);
 
   const handleCodeSubmit = (code, output, language) => {
     submitCodeToAgent(code, output, language);
@@ -210,7 +216,6 @@ export default function Chat() {
     );
   }
 
-  // Error Trap UI
   if (feedbackError) {
     return (
       <div className="ai-theme-wrapper flex items-center justify-center h-screen text-white">
@@ -240,22 +245,6 @@ export default function Chat() {
   const showSandbox = isCodingQuestion && mode !== 'coaching';
 
   const styles = {
-    container: {
-      display: 'flex', width: '100%', height: 'calc(100vh - 80px)', marginTop: '80px', background: '#050814', 
-    },
-    leftPanel: {
-      flex: showSandbox ? '0 0 40%' : 1,
-      position: 'relative', background: 'transparent', overflow: 'hidden',
-      transition: 'flex 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
-    },
-    centerControl: {
-      position: 'absolute', bottom: '30px', left: '50%',
-      transform: 'translateX(-50%)', zIndex: 20,
-    },
-    rightControl: {
-      position: 'absolute', bottom: '30px', right: '30px', zIndex: 20,
-    },
-    
     micButton: {
       width: '70px', height: '70px', borderRadius: '50%', border: 'none',
       background: isListening ? '#ef4444' : 'white',
@@ -279,16 +268,7 @@ export default function Chat() {
       transition: 'flex 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
       background: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(20px)'
     },
-    rightPanel: {
-      width: '400px', 
-      background: 'rgba(15, 23, 42, 0.65)', /* Premium Dark Glass matching the Webcam */
-      backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', 
-      borderLeft: '1px solid rgba(255, 255, 255, 0.08)', 
-      display: 'flex', flexDirection: 'column',
-      flexShrink: 0,
-      boxShadow: '-10px 0 30px rgba(0, 0, 0, 0.5)'
-    },
-    header:   { padding: '20px', borderBottom: '1px solid rgba(255,255,255,0.05)', color: '#ffffff', fontSize: '0.85rem', fontWeight: 'bold', letterSpacing: '1px' },
+    header: { padding: '20px', borderBottom: '1px solid rgba(255,255,255,0.05)', color: '#ffffff', fontSize: '0.85rem', fontWeight: 'bold', letterSpacing: '1px' },
     messages: { flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '15px' },
   };
 
@@ -305,13 +285,13 @@ export default function Chat() {
         />
         {mode === 'coaching' && (
            <div style={{ marginLeft: '20px', background: 'rgba(0,242,254,0.1)', color: '#00f2fe', padding: '6px 12px', borderRadius: '8px', fontWeight: 'bold', fontSize: '14px', border: '1px solid #00f2fe' }}>
-             LIVE COACHING SESSION
+              LIVE COACHING SESSION
            </div>
         )}
       </div>
 
-      <div style={styles.container}>
-        <div style={styles.leftPanel}>
+      <div className="chat-main-container">
+        <div className="chat-left-panel" style={{ flex: showSandbox ? '0 0 40%' : 1 }}>
           <div style={{ width: '100%', height: '100%', position: 'absolute', inset: 0 }}>
             <Experience
               analyser={analyser}
@@ -324,16 +304,18 @@ export default function Chat() {
           </div>
 
           {mode !== 'coaching' && (
-              <WebcamOverlay 
-                sessionId={sessionId}
-                isActive={isAvatarReady && !isInterviewComplete}
-                onTerminate={(reason) => {
-                  handleEndInterview(reason);
-                }}
-              />
+              <div className="webcam-wrapper">
+                <WebcamOverlay 
+                  sessionId={sessionId}
+                  isActive={isAvatarReady && !isInterviewComplete}
+                  onTerminate={(reason) => {
+                    handleEndInterview(reason);
+                  }}
+                />
+              </div>
           )}
 
-          <div style={styles.centerControl}>
+          <div className="chat-center-control">
             <button style={styles.micButton} onClick={handleMicToggle}>
               {isListening ? (
                 <div style={{ width: '24px', height: '24px', background: 'white', borderRadius: '4px' }} />
@@ -348,7 +330,7 @@ export default function Chat() {
             </button>
           </div>
 
-          <div style={styles.rightControl}>
+          <div className="chat-right-control">
             <button style={styles.endButton} onClick={() => handleEndInterview()} disabled={isFeedbackLoading}>
               {isFeedbackLoading ? 'Analyzing...' : (mode === 'coaching' ? 'End Session' : 'End Interview')}
             </button>
@@ -364,7 +346,7 @@ export default function Chat() {
           )}
         </div>
 
-        <div style={styles.rightPanel}>
+        <div className="chat-right-panel">
           <div style={styles.header}>LIVE TRANSCRIPT</div>
           <div style={styles.messages}>
             {messages.map((msg, idx) => (
