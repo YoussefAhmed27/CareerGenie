@@ -1,8 +1,20 @@
 const pool = require("../db");
-// Import both clients
-const { s3Internal, s3External } = require("../utils/s3Client");
-const { GetObjectCommand, DeleteObjectCommand } = require("@aws-sdk/client-s3");
+// Import your internal client for deleting files
+const { s3Internal } = require("../utils/s3Client");
+const { S3Client, GetObjectCommand, DeleteObjectCommand } = require("@aws-sdk/client-s3");
 const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
+
+// THE FIX: A dedicated client strictly for generating public, mobile-ready URLs.
+// This forces the AWS SDK to build the security hash using your Cloudflare domain.
+const s3PublicLinker = new S3Client({
+    endpoint: "https://storage.careersgenie.tech",
+    region: "us-east-1",
+    credentials: {
+        accessKeyId: "admin",         // Ensure these match your MinIO credentials
+        secretAccessKey: "password123"
+    },
+    forcePathStyle: true // Required for MinIO
+});
 
 exports.saveInterview = async (req, res, next) => {
     try {
@@ -72,7 +84,6 @@ exports.getAnalytics = async (req, res, next) => {
 
         const result = await pool.query(queryStr, queryParams);
 
-        // Map DB structure to the flat JSON structure Recharts expects
         const analyticsData = result.rows.map(row => {
             let fb = row.feedback_data;
             if (typeof fb === 'string') {
@@ -142,13 +153,23 @@ exports.getInterviewById = async (req, res, next) => {
         const session = result.rows[0];
         let video_url = null;
 
+        // Generates a mathematically valid Cloudflare URL that phones can read
         if (session.video_object_key) {
             const command = new GetObjectCommand({
                 Bucket: "interview-recordings",
                 Key: session.video_object_key,
             });
-            // USE EXTERNAL CLIENT FOR THE BROWSER URL
-            video_url = await getSignedUrl(s3External, command, { expiresIn: 3600 });
+            video_url = await getSignedUrl(s3PublicLinker, command, { expiresIn: 3600 });
+        }
+
+        // Safely parses the feedback string so the mobile UI doesn't crash
+        let parsedFeedback = session.feedback_data;
+        if (typeof parsedFeedback === 'string') {
+            try { 
+                parsedFeedback = JSON.parse(parsedFeedback); 
+            } catch(e) { 
+                parsedFeedback = {}; 
+            }
         }
 
         res.json({
@@ -158,7 +179,7 @@ exports.getInterviewById = async (req, res, next) => {
                 interview_mode: session.interview_mode,
                 overall_score: session.overall_score,
                 created_at: session.created_at,
-                feedback_data: session.feedback_data,
+                feedback_data: parsedFeedback, 
                 video_url: video_url 
             }
         });
@@ -195,7 +216,6 @@ exports.deleteInterview = async (req, res, next) => {
                 Bucket: "interview-recordings",
                 Key: video_object_key,
             });
-            // USE INTERNAL CLIENT TO EXECUTE THE DELETE
             await s3Internal.send(command);
         }
 

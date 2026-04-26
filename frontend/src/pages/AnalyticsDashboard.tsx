@@ -431,10 +431,7 @@ const StrengthsWeaknessesPanel = ({ allMetrics }: { allMetrics: { name: string; 
   };
 
   return (
-    <div style={{
-      display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24,
-      marginTop: 32,
-    }}>
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
       <div style={{
         background: 'rgba(17,22,34,0.8)', backdropFilter: 'blur(12px)',
         border: '1px solid rgba(255,255,255,0.08)', borderRadius: 28, padding: 32,
@@ -646,7 +643,6 @@ const AnalyticsDashboard = () => {
           </div>
         </div>
 
-        {/*KPI Cards*/}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <KPICard title="Total Sessions"    value={totalInterviews.toString()}     color="#00f2fe" icon={<IconCalendar />} />
           <KPICard title="Peak Score"        value={peakScore.toFixed(1)}           color="#a07ae0" icon={<IconStar />} />
@@ -654,7 +650,6 @@ const AnalyticsDashboard = () => {
           <KPICard title="Total Improvement" value={`+${improvement.toFixed(1)}`}  color="#29d4d4" icon={<IconTrendingUp />} />
         </div>
 
-        {/*Growth Graph*/}
         <ChartSection
           title="GROWTH GRAPH"
           dotColor={tmc.color1}
@@ -692,7 +687,6 @@ const AnalyticsDashboard = () => {
           </ResponsiveContainer>
         </ChartSection>
 
-        {/*Role Comparison bar chart*/}
         <ChartSection
           title="ROLE COMPARISON"
           dotColor={rmc.color1}
@@ -738,7 +732,6 @@ const AnalyticsDashboard = () => {
           </ResponsiveContainer>
         </ChartSection>
 
-        {/*Behavioral Signals line chart*/}
         <ChartSection
           title="BEHAVIORAL SIGNALS"
           dotColor="#00f2fe"
@@ -769,20 +762,18 @@ const AnalyticsDashboard = () => {
           </ResponsiveContainer>
         </ChartSection>
 
-        {/*Performance Metrics*/}
         <div style={{ marginTop: 32 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 24 }}>
             <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#a07ae0', boxShadow: '0 0 10px #a07ae0', display: 'inline-block' }} />
             <h3 style={{ fontSize: 22, fontWeight: 900, color: '#fff', letterSpacing: 3, margin: 0 }}>METRICS DEEP DIVE</h3>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             <InteractiveRadar title="Tech Competencies"  traits={techRadarTraits}   color="#00f2fe" />
             <InteractiveRadar title="Personality Traits" traits={personalityTraits} color="#a07ae0" />
             <InteractiveRadar title="Speech Dynamics"    traits={speechTraits}      color="#d422eb" />
           </div>
         </div>
 
-        {/*Strengths & Weaknesses Panel*/}
         <div style={{ marginTop: 40 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 8 }}>
             <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#29d4d4', boxShadow: '0 0 10px #29d4d4', display: 'inline-block' }} />

@@ -389,6 +389,7 @@
   .setup-card p.subtitle { font-size: 0.8rem; }
 }
 
+
 .chat-main-container {
   display: flex;
   width: 100%;
@@ -433,35 +434,163 @@
 
 .webcam-wrapper {
   position: absolute;
-  top: 20px;
-  right: 20px;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   z-index: 10;
-  transition: all 0.3s ease;
+  pointer-events: none; 
+}
+
+.webcam-wrapper > div {
+  pointer-events: auto; 
 }
 
 @media (max-width: 768px) {
+  .chat-main-container {
+    flex-direction: column; 
+  }
+  
   .chat-left-panel {
-    flex: 1 !important;
+    height: 55vh; 
+    flex: none !important; 
   }
   
   .chat-right-panel {
-    display: none !important;
+    width: 100%; 
+    height: 45vh; 
+    border-left: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
   }
 
+  
   .webcam-wrapper {
-    width: 100px !important;
-    height: 140px !important;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-  }
-  
-  .chat-center-control {
-    bottom: 40px;
-  }
-  
-  .chat-right-control {
-    bottom: 40px;
+    position: absolute;
+    top: 20px;
     right: 20px;
+    width: 320px; 
+    height: 240px;
+    transform-origin: top right;
+    transform: scale(0.45);
+    z-index: 100;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.9);
+  }
+
+  .chat-center-control { bottom: 20px; }
+  .chat-right-control { bottom: 20px; right: 20px; }
+}
+
+/* =========================================================
+   MASTER MOBILE OVERRIDES (SETUP, LOADER, & FEEDBACK)
+   ========================================================= */
+
+@media (max-width: 768px) {
+  /* --- 1. ANALYSIS LOADER SCREEN --- */
+  .massive-astrolabe {
+    width: 320px !important;
+    height: 320px !important;
+  }
+  .massive-astrolabe svg {
+    max-width: 100% !important;
+    height: auto !important;
+  }
+
+  /* --- 2. SETUP SCREEN --- */
+  .form-top-row {
+    flex-direction: column !important;
+    gap: 1.5rem !important;
+  }
+  .role-group {
+    flex: none !important;
+    width: 100% !important;
+  }
+  .cv-pods-container {
+    justify-content: center !important;
+    gap: 1.5rem !important;
+  }
+  .circles-row {
+    flex-direction: column !important;
+    gap: 15px !important;
+    align-items: center !important;
+  }
+  .mode-selector-container {
+    height: auto !important;
+    padding-bottom: 20px;
+  }
+  .mode-description-box {
+    height: auto !important;
+    padding: 20px !important;
+  }
+  .studio-dashboard-container {
+    grid-template-columns: 1fr !important; /* Stacks Webcam and Audio Monitor */
+  }
+  .bottom-nav-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 15px !important;
+  }
+  .btn-back-wrapper, .btn-next-wrapper {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+  .btn-back, .btn-next, .start-interview-btn {
+    width: 100% !important;
+  }
+  .center-dice-wrapper {
+    order: -1 !important; /* Moves the Dice button above the Back/Next buttons on mobile */
+  }
+
+  /* --- 3. FEEDBACK DISPLAY (Crushing Inline Styles) --- */
+  
+  /* Flips the horizontal scroll to a normal vertical scroll on phones */
+  .horizontal-scroll-container {
+    flex-direction: column !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    scroll-snap-type: y mandatory !important;
+  }
+  .snap-screen {
+    padding: 30px 20px !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+    gap: 30px !important;
+    height: auto !important;
+    min-height: 100vh !important;
+  }
+  
+  /* Targets the hardcoded '500px' box and makes it full width */
+  div[style*="0 0 500px"] {
+    flex: none !important;
+    width: 100% !important;
+    padding: 25px !important;
+  }
+  
+  /* Targets the hardcoded '1fr 1fr' grids and stacks them to 1fr */
+  div[style*="grid-template-columns: 1fr 1fr"] {
+    grid-template-columns: 1fr !important;
+    gap: 30px !important;
+  }
+
+  .screen-header {
+    flex-direction: column !important;
+    gap: 20px !important;
+    text-align: center !important;
+  }
+  .screen-header > div {
+    padding-right: 0 !important;
+    align-items: center !important;
+  }
+  .screen-title { 
+    font-size: 2.2rem !important; 
+  }
+  .scroll-indicator {
+    display: none !important; /* Hide "Scroll Right" text on mobile */
+  }
+  
+  /* Prevents the massive Radar SVG from breaking the screen width */
+  .snap-screen svg {
+    max-width: 100% !important;
+    height: auto !important;
   }
 }
