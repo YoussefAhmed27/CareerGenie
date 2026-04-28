@@ -12,8 +12,6 @@ from fastapi.middleware.cors import CORSMiddleware
 import boto3
 from botocore.client import Config
 from PyPDF2 import PdfReader
-from faster_whisper import WhisperModel
-from piper.voice import PiperVoice
 import soundfile as sf
 from fastapi.responses import StreamingResponse
 import tempfile
@@ -77,7 +75,7 @@ s3_external = boto3.client(
 )
 
 BUCKET_NAME = "interview-recordings"
-# ==========================================
+
 
 
 app = FastAPI()
@@ -404,9 +402,6 @@ class SessionStartRequest(BaseModel):
 class ChatRequest(BaseModel):
     session_id: str
     message: str
-
-class SynthesisRequest(BaseModel):
-    text: str
 
 class FeedbackRequest(BaseModel):
     session_id: str
@@ -887,8 +882,6 @@ async def interview_websocket(websocket: WebSocket, session_id: str, mode: str =
         print(f"Agent WebSocket Error: {e}")
 
 
-tts_voice = PiperVoice.load("./models/en_US-kristin-medium.onnx", config_path="./models/en_US-kristin-medium.onnx.json")
-stt_model = WhisperModel("base.en", device="cpu", compute_type="int8")
 
 @app.post("/get_feedback")
 async def get_feedback(request: FeedbackRequest):
@@ -981,28 +974,3 @@ async def get_feedback(request: FeedbackRequest):
         print(f"Dual-Agent Feedback Error: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to generate feedback.")
 
-
-@app.post("/transcribe")
-async def transcribe_audio(file: UploadFile = File(...)):
-    audio_data = await file.read()
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav", mode='wb') as tmp:
-        tmp.write(audio_data)
-        tmp_path = tmp.name
-    segments, _ = stt_model.transcribe(tmp_path, beam_size=5, vad_filter=True)
-    text = "".join([s.text for s in segments]).strip()
-    os.remove(tmp_path)
-    return {"transcript": text}
-
-@app.post("/synthesize")
-async def synthesize_speech(req: SynthesisRequest):
-    def do_syn(t):
-        samples = []
-        for chunk in tts_voice.synthesize(t):
-            if hasattr(chunk, "audio_int16_bytes"):
-                samples.append(np.frombuffer(chunk.audio_int16_bytes, dtype=np.int16).astype(np.float32) / 32768.0)
-        audio = np.concatenate(samples)
-        io_buf = io.BytesIO()
-        sf.write(io_buf, audio, 22050, format="WAV")
-        return io_buf.getvalue()
-    audio_bytes = await asyncio.to_thread(do_syn, req.text)
-    return StreamingResponse(io.BytesIO(audio_bytes), media_type="audio/wav")
