@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-const AI_BASE_URL = import.meta.env.VITE_AI_URL || 'http://127.0.0.1:8000';
-const NODE_BASE_URL = import.meta.env.VITE_NODE_URL || 'http://localhost:5000';
+const AI_BASE_URL = import.meta.env.VITE_AI_URL; 
+const NODE_BASE_URL = import.meta.env.VITE_NODE_URL;
 
 const API_CLIENT = axios.create({
   baseURL: AI_BASE_URL,

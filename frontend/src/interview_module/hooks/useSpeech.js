@@ -3,13 +3,9 @@ import { getSharedMediaStream } from './mediaHub';
 import { textToVisemes } from '../utils/visemeMapper';
 import { uploadInterviewRecording } from '../api/interviewService';
 
-// --- ADDED DYNAMIC URLS HERE ---
 const AI_BASE_URL = import.meta.env.VITE_AI_URL || 'http://127.0.0.1:8000';
-const wsProtocol = AI_BASE_URL.startsWith('https') ? 'wss' : 'ws';
-const wsHost = AI_BASE_URL.replace(/^https?:\/\//, '');
-
 const MER_BASE_URL = import.meta.env.VITE_MER_URL || 'http://127.0.0.1:8002';
-// -------------------------------
+const WS_BASE_URL = import.meta.env.VITE_WS_URL || 'ws://127.0.0.1:8000';
 
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
 const globalAnalyser = audioCtx.createAnalyser();
@@ -89,8 +85,7 @@ export const useSpeech = (sessionId, isAvatarReady = false, mode = 'interview') 
   useEffect(() => {
     if (!sessionId || !isAvatarReady) return;
 
-    // --- UPDATED WEBSOCKET URL HERE ---
-    const ws = new WebSocket(`${wsProtocol}://${wsHost}/ws/interview/${sessionId}?mode=${mode}`);
+    const ws = new WebSocket(`${WS_BASE_URL}/interview/${sessionId}?mode=${mode}`);
     ws.binaryType = 'arraybuffer';
 
     ws.onmessage = (event) => {
