@@ -80,9 +80,16 @@ BUCKET_NAME = "interview-recordings"
 
 app = FastAPI()
 
+# Define your specific production and development origins
+origins = [
+    "https://career-genie-eta.vercel.app",  # Your Vercel Frontend
+    "https://careersgenie.tech",            # Your Custom Domain
+    "http://localhost:5173",                # Local development
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,  # <--- Use the list, NOT ["*"]
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -251,7 +251,7 @@ export const useSpeech = (sessionId, isAvatarReady = false, mode = 'interview') 
         
         const options = { 
           mimeType: 'video/webm;codecs=vp8,opus',
-          videoBitsPerSecond: 250000
+          videoBitsPerSecond: 1500000
         };
         const recorder = new MediaRecorder(mixedStream, options);
         
