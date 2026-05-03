@@ -3,9 +3,11 @@ import { getSharedMediaStream } from './mediaHub';
 import { textToVisemes } from '../utils/visemeMapper';
 import { uploadInterviewRecording } from '../api/interviewService';
 
+// --- ADDED DYNAMIC URLS HERE ---
 const AI_BASE_URL = import.meta.env.VITE_AI_URL || 'http://127.0.0.1:8000';
-const MER_BASE_URL = import.meta.env.VITE_MER_URL || 'http://127.0.0.1:8002';
-const WS_BASE_URL = import.meta.env.VITE_WS_URL || 'ws://127.0.0.1:8000';
+const wsProtocol = AI_BASE_URL.startsWith('https') ? 'wss' : 'ws';
+const wsHost = AI_BASE_URL.replace(/^https?:\/\//, '');
+// -------------------------------
 
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
 const globalAnalyser = audioCtx.createAnalyser();
@@ -85,7 +87,8 @@ export const useSpeech = (sessionId, isAvatarReady = false, mode = 'interview') 
   useEffect(() => {
     if (!sessionId || !isAvatarReady) return;
 
-    const ws = new WebSocket(`${WS_BASE_URL}/interview/${sessionId}?mode=${mode}`);
+    // --- UPDATED WEBSOCKET URL HERE ---
+    const ws = new WebSocket(`${wsProtocol}://${wsHost}/ws/interview/${sessionId}?mode=${mode}`);
     ws.binaryType = 'arraybuffer';
 
     ws.onmessage = (event) => {
@@ -282,22 +285,11 @@ export const useSpeech = (sessionId, isAvatarReady = false, mode = 'interview') 
             }
 
             await uploadInterviewRecording(sessionId, blob);
-            
-            const formData = new FormData();
-            formData.append('video', blob, `interview_${sessionId}.webm`);
-            formData.append('qa_intervals', JSON.stringify(qaIntervalsRef.current));
-            
-            try {
-                // --- UPDATED MER URL HERE ---
-                const response = await fetch(`${MER_BASE_URL}/api/analyze_interview`, {
-                    method: 'POST',
-                    body: formData,
-                });
-                const result = await response.json();
-                localStorage.setItem(`mer_report_${sessionId}`, JSON.stringify(result.data));
-            } catch (err) {
-                console.error(err);
-            }
+
+            localStorage.setItem(
+              `qa_intervals_${sessionId}`,
+              JSON.stringify(qaIntervalsRef.current)
+            );
 
             setIsVideoUploaded(true);
             setIsAnalyzing(false);

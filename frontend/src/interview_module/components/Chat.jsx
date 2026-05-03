@@ -88,7 +88,10 @@ export default function Chat() {
     if (isFeedbackLoading && isVideoUploaded && !feedbackData && !feedbackError) {
       const fetchFeedback = async () => {
         try {
-          const storedMerData = JSON.parse(localStorage.getItem(`mer_report_${sessionId}`) || "[]");
+          const storedQaIntervals = JSON.parse(
+            localStorage.getItem(`qa_intervals_${sessionId}`) || "[]"
+          );
+
           const AI_BASE_URL = import.meta.env.VITE_AI_URL || 'https://ai.careersgenie.tech';
           
           const response = await fetch(`${AI_BASE_URL}/get_feedback`, {
@@ -96,7 +99,7 @@ export default function Chat() {
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                   session_id: sessionId,
-                  mer_data: storedMerData
+                  qa_intervals: storedQaIntervals
               })
           });
           
