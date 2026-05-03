@@ -5,6 +5,8 @@ const SAMPLING_RATE = 100;
 const SMOOTHING_FACTOR = 0.05; 
 const PROCTOR_INTERVAL = 500; 
 
+const PROCTOR_WS_URL = import.meta.env.VITE_PROCTOR_WS_URL || 'ws://127.0.0.1:8001';
+
 export default function WebcamOverlay({ sessionId, onTerminate, isActive }) {
   const videoRef = useRef(null);
   const wsRef = useRef(null);     
@@ -33,7 +35,7 @@ export default function WebcamOverlay({ sessionId, onTerminate, isActive }) {
             videoRef.current.play();
         }
         
-        wsRef.current = new WebSocket(`ws://127.0.0.1:8001/ws/proctor/${sessionId}`);
+        wsRef.current = new WebSocket(`${PROCTOR_WS_URL}/ws/proctor/${sessionId}`);
         
         wsRef.current.onmessage = (event) => {
             const data = JSON.parse(event.data);
