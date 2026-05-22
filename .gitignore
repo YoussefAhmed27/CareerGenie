@@ -21,3 +21,5 @@ backend-ai/recordings/*
 backend-ai/models/*.wav
 backend-ai/models/*.mp3
 !backend-ai/models/.gitkeep
+backend-ai/cv-service/outputs/*
+backend-ai/cv-service/uploads/*
