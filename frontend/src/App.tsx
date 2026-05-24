@@ -6,6 +6,8 @@ import Home from "./components/Home-page";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import HrDashboard from "./components/Hr-dashboard";
+import HrLogin from "./pages/HR/HrLogin";
+import HrLanding from "./pages/HR/HrLanding";
 import Profile from "./pages/Profile";
 import InterviewHistory from "./pages/InterviewHistory";
 import InterviewDetail from "./pages/InterviewDetail";
@@ -27,6 +29,12 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   const token = localStorage.getItem('token');
   return token ? <Navigate to="/" /> : <>{children}</>;
+};
+
+const HrProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const token = localStorage.getItem('hr_token');
+  const isValid = token && token !== 'null' && token !== 'undefined';
+  return isValid ? <>{children}</> : <Navigate to="/hr-login" />;
 };
 
 const App = () => {
@@ -102,7 +110,9 @@ const App = () => {
         />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/hr-dashboard" element={<ProtectedRoute><HrDashboard /></ProtectedRoute>} />
+        <Route path="/hr-dashboard" element={<HrProtectedRoute><HrDashboard /></HrProtectedRoute>} />
+        <Route path="/hr-login" element={<HrLogin />} />
+        <Route path="/hr" element={<HrLanding />} />
         <Route path="/interview/setup" element={<ProtectedRoute><Setup /></ProtectedRoute>} />
         <Route path="/interview/session" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
         <Route path="/interview/feedback" element={<ProtectedRoute><FeedbackDisplay /></ProtectedRoute>} />

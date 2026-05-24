@@ -48,6 +48,9 @@ app.use("/auth", authRoutes);
 app.use("/practice", practiceRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/interviews", require("./routes/interview"));
+app.use("/api/hr", require("./routes/hr"));
+app.use("/auth/hr", require("./routes/hr-auth"));
+
 
 app.get("/", (req, res) => {
     res.json({ message: "CareerGenie Backend Running" });
@@ -67,6 +70,9 @@ app.use((req, res) => {
 });
 
 app.use(errorHandler);
+
+const runMigrations = require("./utils/migrate");
+runMigrations();
 
 const PORT = process.env.PORT || 5000;
 
