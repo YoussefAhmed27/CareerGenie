@@ -36,8 +36,6 @@ const Profile: React.FC = () => {
 
     const [message, setMessage] = useState("");
     const [error, setError] = useState("");
-    const [photoFile, setPhotoFile] = useState<File | null>(null);
-    const [cvFile, setCvFile] = useState<File | null>(null);
     const [loading, setLoading] = useState(true);
     const [photoPreviewUrl, setPhotoPreviewUrl] = useState("");
     const [cvPreviewUrl, setCvPreviewUrl] = useState("");
@@ -230,7 +228,6 @@ const Profile: React.FC = () => {
             const localPhotoUrl = URL.createObjectURL(file);
             setPhotoPreviewUrl(localPhotoUrl);
 
-            setPhotoFile(null);
             setMessage("Photo uploaded successfully.");
         } catch (err: any) {
             setError(err.message || "Failed to upload photo");
@@ -278,7 +275,6 @@ const Profile: React.FC = () => {
             const localCvUrl = URL.createObjectURL(file);
             setCvPreviewUrl(localCvUrl);
 
-            setCvFile(null);
             setMessage("CV uploaded successfully.");
         } catch (err: any) {
             setError(err.message || "Failed to upload CV");
@@ -382,7 +378,6 @@ const Profile: React.FC = () => {
                                 onChange={(e) => {
                                     const file = e.target.files?.[0];
                                     if (file) {
-                                        setPhotoFile(file);
                                         handlePhotoUpload(file);
                                     }
                                 }}
@@ -414,7 +409,6 @@ const Profile: React.FC = () => {
                                 onChange={(e) => {
                                     const file = e.target.files?.[0];
                                     if (file) {
-                                        setCvFile(file);
                                         handleCvUpload(file);
                                     }
                                 }}

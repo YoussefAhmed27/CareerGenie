@@ -21,6 +21,14 @@ export default defineConfig({
       '/uploads': {
         target: 'http://localhost:5000',
         changeOrigin: true,
+      },
+      '/cv': {
+        target: 'http://localhost:8002',
+        changeOrigin: true,
+      },
+      '/tailor': {
+        target: 'http://localhost:8002',
+        changeOrigin: true,
       }
     }
   }

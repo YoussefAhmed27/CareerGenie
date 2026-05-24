@@ -10,6 +10,7 @@ import Profile from "./pages/Profile";
 import InterviewHistory from "./pages/InterviewHistory";
 import InterviewDetail from "./pages/InterviewDetail";
 import AnalyticsDashboard from "./pages/AnalyticsDashboard";
+import CVAssistant from "./pages/CVAssistant";
 
 // @ts-ignore
 import Setup from "./interview_module/components/Setup";
@@ -106,6 +107,7 @@ const App = () => {
         <Route path="/interview/setup" element={<ProtectedRoute><Setup /></ProtectedRoute>} />
         <Route path="/interview/session" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
         <Route path="/interview/feedback" element={<ProtectedRoute><FeedbackDisplay /></ProtectedRoute>} />
+        <Route path="/cv-assistant" element={<ProtectedRoute><CVAssistant /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
         <Route path="/history" element={<ProtectedRoute><InterviewHistory /></ProtectedRoute>} />
         <Route path="/history/:id" element={<ProtectedRoute><InterviewDetail /></ProtectedRoute>} />

@@ -15,7 +15,7 @@ class Education(BaseModel):
     details: List[str] = Field(default_factory=list)
 
 class Experience(BaseModel):
-    id: str = Field(..., description="Unique identifier for internal tracking")
+    id: str = Field(default="", description="Unique identifier for internal tracking")
     job_title: str = ""
     company: str = ""
     dates: str = ""
@@ -24,7 +24,7 @@ class Experience(BaseModel):
     relevance_score: float = 0.0 # To be populated later
 
 class Project(BaseModel):
-    id: str = Field(..., description="Unique identifier for internal tracking")
+    id: str = Field(default="", description="Unique identifier for internal tracking")
     name: str = ""
     bullets: List[str] = Field(default_factory=list)
     relevance_score: float = 0.0
