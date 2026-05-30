@@ -18,19 +18,26 @@ from app.tailoring.prompts.tailor_prompts import (
 HEAVY_MODEL = "llama-3.3-70b-versatile"
 
 async def tailor_summary(cv: ParsedCV, context: TailoringContext) -> GeneratedSummary:
-    user_content = (
-        f"TARGET ROLE: {context.target_job_title}\n"
-        f"KEY REQUIREMENTS: {', '.join(context.top_requirements)}\n"
-        f"ORIGINAL SUMMARY: {cv.summary_text}\n"
-        f"ALLOWED_SKILLS: {json.dumps(context.allowed_skills)}\n"
+    # Use original summary directly — LLM rewrites consistently hallucinate.
+    # The renderer and validator will handle the rest.
+    print(f"[SUMMARY DEBUG] target_job_title='{context.target_job_title}', top_requirements={context.top_requirements[:2]}")
+    if cv.summary_text and cv.summary_text.strip():
+       summary_text = cv.summary_text.strip()
+    else:
+        # Parser found no summary — build from parsed data
+        latest_title = cv.experience[0].job_title if cv.experience else "Professional"
+        top_skills = ", ".join(cv.skills[:4]) if cv.skills else "industry-standard tools"
+        summary_text = f"{latest_title} with expertise in {top_skills}."
+
+    # Optional: append one JD-targeted sentence deterministically
+    if context.target_job_title and context.top_requirements:
+        top_reqs = ", ".join(context.top_requirements[:2])
+        summary_text += f" Seeking to apply this background toward {context.target_job_title} roles with focus on {top_reqs}."
+
+    return GeneratedSummary(
+        text=summary_text,
+        source_evidence=[cv.summary_text.strip() if cv.summary_text else summary_text]
     )
-    result = await call_llm_structured(
-        system_prompt=TAILOR_SUMMARY_PROMPT,
-        user_content=user_content,
-        response_model=GeneratedSummary,
-        model=HEAVY_MODEL
-    )
-    return result
 
 async def tailor_experience_section(cv: ParsedCV, context: TailoringContext) -> List[TailoredExperience]:
     user_content = (

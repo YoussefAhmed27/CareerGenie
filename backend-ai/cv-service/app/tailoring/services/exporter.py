@@ -36,7 +36,7 @@ def export_to_pdf(md_text: str) -> bytes:
         p {{ margin-bottom: 8px; }}
         ul {{ margin-top: 0px; margin-bottom: 10px; padding-left: 20px; }}
         li {{ margin-bottom: 4px; }}
-        hr {{ border: 0; border-bottom: 1px solid #dddddd; margin: 10px 0; }}
+       hr {{ border: 0; border-bottom: 1px solid #dddddd; margin: 10px 0; }}
     </style>
     </head>
     <body>
@@ -56,13 +56,8 @@ def export_to_pdf(md_text: str) -> bytes:
     return pdf_buffer.getvalue()
 
 def export_to_docx(md_text: str) -> bytes:
-    """
-    Converts Markdown text to a DOCX file in-memory.
-    Implements a line-by-line parser to map Markdown syntax to Word Document elements.
-    """
     document = Document()
     
-    # Basic CV styling adjustments for the default styles
     style = document.styles['Normal']
     font = style.font
     font.name = 'Arial'
@@ -76,38 +71,64 @@ def export_to_docx(md_text: str) -> bytes:
             continue
             
         if stripped == '---':
-            # docx doesn't have a simple horizontal rule, we could add an empty paragraph with a bottom border
-            # but for simplicity we'll just skip it or add a blank line
-            document.add_paragraph()
+            paragraph = document.add_paragraph()
+            from docx.oxml.ns import qn
+            from docx.oxml import OxmlElement
+            pPr = paragraph._p.get_or_add_pPr()
+            pBdr = OxmlElement('w:pBdr')
+            bottom = OxmlElement('w:bottom')
+            bottom.set(qn('w:val'), 'single')
+            bottom.set(qn('w:sz'), '6')
+            bottom.set(qn('w:space'), '1')
+            bottom.set(qn('w:color'), 'CCCCCC')
+            pBdr.append(bottom)
+            pPr.append(pBdr)
             continue
             
         if stripped.startswith('# '):
-            # Title
             title_text = stripped[2:].strip()
             title = document.add_heading(title_text, level=0)
-            title.alignment = 1 # Center
+            title.alignment = 1
         elif stripped.startswith('## '):
-            # Heading 1
             document.add_heading(stripped[3:].strip(), level=1)
         elif stripped.startswith('### '):
-            # Heading 2
             document.add_heading(stripped[4:].strip(), level=2)
+        elif stripped.startswith('<div class="date-line">') or stripped.startswith('<table'):
+            from docx.oxml.ns import qn
+            from docx.oxml import OxmlElement
+            import re as _re
+            
+            spans = _re.findall(r'<td[^>]*>(.*?)</td>', stripped)
+            if not spans:
+                spans = _re.findall(r'<span>(.*?)</span>', stripped)
+            left = spans[0] if len(spans) > 0 else ''
+            right = spans[1] if len(spans) > 1 else ''
+            
+            p = document.add_paragraph()
+            pPr = p._p.get_or_add_pPr()
+            tabs = OxmlElement('w:tabs')
+            tab = OxmlElement('w:tab')
+            tab.set(qn('w:val'), 'right')
+            tab.set(qn('w:pos'), '9360')
+            tabs.append(tab)
+            pPr.append(tabs)
+            
+            run1 = p.add_run(left)
+            run1.italic = True
+            p.add_run('\t')
+            run2 = p.add_run(right)
+            run2.italic = True
         elif stripped.startswith('- '):
-            # Bullet point
-            # Check if there is bold text inside
             bullet_text = stripped[2:].strip()
             p = document.add_paragraph(style='List Bullet')
             _add_formatted_text(p, bullet_text)
         else:
-            # Normal text / paragraph
-            # Might be contact info with " | "
             p = document.add_paragraph()
             _add_formatted_text(p, stripped)
             
     docx_buffer = io.BytesIO()
     document.save(docx_buffer)
     return docx_buffer.getvalue()
-
 def _add_formatted_text(paragraph, text: str):
     """Helper to parse **bold** tags and add them to a docx paragraph."""
     # Split text by **

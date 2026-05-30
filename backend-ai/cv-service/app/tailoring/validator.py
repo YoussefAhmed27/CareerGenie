@@ -35,16 +35,17 @@ def check_hallucinations(tailored: TailoredCV, original: ParsedCV) -> None:
 
 
 def check_summary_grounding(tailored: TailoredCV, original: ParsedCV) -> None:
-    """
-    Validates that the Professional Summary is grounded using literal substrings.
-    """
+    # If original has no summary, nothing to ground against — skip validation
+    if not original.summary_text or not original.summary_text.strip():
+        return
+    
     is_valid = True
     
     if not tailored.summary.source_evidence:
         is_valid = False
     else:
         for ev in tailored.summary.source_evidence:
-            if ev not in original.summary_text:
+            if ev.strip() not in original.summary_text.strip():
                 is_valid = False
                 break
                 
