@@ -29,6 +29,10 @@ export default defineConfig({
       '/tailor': {
         target: 'http://localhost:8002',
         changeOrigin: true,
+      },
+      '/generation': {
+        target: 'http://localhost:8002',
+        changeOrigin: true,
       }
     }
   }

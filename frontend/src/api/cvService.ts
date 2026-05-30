@@ -47,6 +47,44 @@ export type TailoringResponse = {
   tailored_cv_markdown: string;
 };
 
+export type CandidateProfileInput = {
+  name: string;
+  email: string;
+  phone: string;
+  linkedin: string;
+  target_role: string;
+  skills: string[];
+  education: Array<{
+    degree: string;
+    institution: string;
+    year: string;
+  }>;
+  experience: Array<{
+    job_title: string;
+    company: string;
+    year: string;
+    location: string;
+    bullets: string[];
+  }>;
+  projects: Array<{
+    name: string;
+    bullets: string[];
+  }>;
+  certifications: string[];
+  languages: string[];
+};
+
+export type CVGenerationRequest = {
+  structured: CandidateProfileInput;
+  extra_info: string;
+};
+
+export type GeneratedCVResponse = {
+  cv_id: string;
+  generated_cv: unknown;
+  generated_cv_markdown: string;
+};
+
 type ApiErrorPayload = {
   detail?: string;
   error?: string;
@@ -107,3 +145,19 @@ export const tailorCv = async (file: File, jdText: string) => {
 
 export const getTailoredCvDownloadUrl = (cvId: string, format: "pdf" | "docx") =>
   `/tailor/download/${format}?cv_id=${encodeURIComponent(cvId)}`;
+
+export const generateCvFromScratch = async (payload: CVGenerationRequest) => {
+  try {
+    const response = await cvClient.post<GeneratedCVResponse>(
+      "/generation/generate",
+      payload,
+    );
+
+    return response.data;
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error, "Failed to generate CV."));
+  }
+};
+
+export const getGeneratedCvDownloadUrl = (cvId: string, format: "pdf" | "docx") =>
+  `/generation/download/${format}?cv_id=${encodeURIComponent(cvId)}`;
