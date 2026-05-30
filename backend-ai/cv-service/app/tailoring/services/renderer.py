@@ -25,7 +25,7 @@ def render_markdown(tailored_cv: TailoredCV, original_cv: ParsedCV) -> str:
 
     # 2. Summary
     if tailored_cv.summary and tailored_cv.summary.text:
-        md.append("## Professional Summary")
+        md.append("## Summary")
         md.append(tailored_cv.summary.text)
         md.append("\n---\n")
 
@@ -33,7 +33,7 @@ def render_markdown(tailored_cv: TailoredCV, original_cv: ParsedCV) -> str:
     if original_cv.education:
         md.append("## Education")
         for edu in original_cv.education:
-            md.append(f"- **{edu.degree}**, {edu.institution}, {edu.date}")
+            md.append(f'<table width="100%" cellpadding="0" cellspacing="0"><tr><td style="text-align:left;"><strong>{edu.degree}</strong>, {edu.institution}</td><td style="text-align:right;font-style:italic;color:#555;">{edu.date}</td></tr></table>')
             for det in edu.details:
                 md.append(f"  - {det}")
         md.append("\n---\n")
@@ -54,8 +54,10 @@ def render_markdown(tailored_cv: TailoredCV, original_cv: ParsedCV) -> str:
             if exp.dates: date_loc.append(exp.dates)
             if exp.location: date_loc.append(exp.location)
             if date_loc:
-                md.append(" | ".join(date_loc))
-                
+                if len(date_loc) == 2:
+                    md.append(f'<table width="100%" cellpadding="0" cellspacing="0"><tr><td style="text-align:left;font-style:italic;color:#555;">{date_loc[0]}</td><td style="text-align:right;font-style:italic;color:#555;">{date_loc[1]}</td></tr></table>')
+                else:
+                    md.append(f'<table width="100%" cellpadding="0" cellspacing="0"><tr><td style="text-align:left;font-style:italic;color:#555;"></td><td style="text-align:right;font-style:italic;color:#555;">{date_loc[0]}</td></tr></table>')
             for b in exp.bullets:
                 md.append(f"- {b.text}")
             md.append("")
