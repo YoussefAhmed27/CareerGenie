@@ -44,59 +44,40 @@ deepgram = AsyncDeepgramClient(api_key=DEEPGRAM_API_KEY)
 tts_client = httpx.AsyncClient(timeout=None)
 
 GROQ_CHAT_MODEL = "llama-3.3-70b-versatile"
-FEEDBACK_MODEL  = "openai/gpt-oss-120b" 
+FEEDBACK_MODEL  = "openai/gpt-oss-120b"
 STT_MODEL       = "whisper-large-v3-turbo"
 EMBEDDING_MODEL = "models/gemini-embedding-001"
 
-# ==========================================
-# PRODUCTION MINIO SETUP (DUAL CLIENTS)
-# ==========================================
 
-# 1. Internal Client (For FastAPI to upload over Docker Network)
-INTERNAL_ENDPOINT = os.getenv("MINIO_ENDPOINT_INTERNAL", "http://minio:9000")
-s3_internal = boto3.client(
+# PRODUCTION DO SPACES SETUP
+SPACES_ENDPOINT = os.getenv("DO_SPACES_ENDPOINT")
+SPACES_KEY = os.getenv("DO_SPACES_KEY")
+SPACES_SECRET = os.getenv("DO_SPACES_SECRET")
+BUCKET_NAME = os.getenv("DO_SPACES_BUCKET", "interview-recordings")
+
+# 1. Create the single connection to DigitalOcean Spaces
+do_space_client = boto3.client(
     's3',
-    endpoint_url=INTERNAL_ENDPOINT,
-    aws_access_key_id='admin',
-    aws_secret_access_key='password123',
-    config=Config(signature_version='s3v4'),
-    region_name='us-east-1'
+    region_name='fra1', 
+    endpoint_url=SPACES_ENDPOINT,
+    aws_access_key_id=SPACES_KEY,
+    aws_secret_access_key=SPACES_SECRET
 )
 
-# 2. External Client (For generating mathematically valid signatures for the Browser)
-PUBLIC_ENDPOINT = os.getenv("MINIO_ENDPOINT_PUBLIC", "http://localhost:9000")
-s3_external = boto3.client(
-    's3',
-    endpoint_url=PUBLIC_ENDPOINT,
-    aws_access_key_id='admin',
-    aws_secret_access_key='password123',
-    config=Config(signature_version='s3v4'),
-    region_name='us-east-1'
-)
-
-BUCKET_NAME = "interview-recordings"
-
-
+s3_internal = do_space_client
+s3_external = do_space_client
 
 app = FastAPI()
 
-# Define your specific production and development origins
-origins = [
-    "https://career-genie-eta.vercel.app",  # Your Vercel Frontend
-    "https://careersgenie.tech",            # Your Custom Domain
-    "http://localhost:5173",                # Local development
-]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,  # <--- Use the list, NOT ["*"]
+    allow_origins=["https://career-genie-eta.vercel.app", "https://careersgenie.tech", "http://localhost:5173"], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 SESSIONS = {}
-
 
 BEHAVIORAL_SYSTEM_PROMPT = """
 You are an Expert HR Coach and Behavioral Analyst conducting a high-end enterprise evaluation.
@@ -116,8 +97,7 @@ You must output a STRICT JSON object matching this schema:
 {
   "header": {
       "candidate_name": "<string, extract from transcript if possible, else 'Candidate'>",
-      "interview_date": "<string, output current date>",
-      
+      "interview_date": "<string, output current date>"
   },
   "top_section": {
       "behavioral_score": <float 1-10, calibrated>,
@@ -145,15 +125,15 @@ You must output a STRICT JSON object matching this schema:
   },
   "detailed_analysis": {
       "strengths": [
-          "<string, detailed 3-sentence explanation of a specific communication strength>", 
+          "<string, detailed 3-sentence explanation of a specific communication strength>",
           "<string, detailed 3-sentence explanation of another strength>"
       ],
       "weaknesses": [
-          "<string, detailed 3-sentence explanation of a delivery flaw or hesitation>", 
+          "<string, detailed 3-sentence explanation of a delivery flaw or hesitation>",
           "<string, detailed 3-sentence explanation of another weakness>"
       ],
       "improvement_tips": [
-          "<string, detailed, actionable 3-sentence coaching tip>", 
+          "<string, detailed, actionable 3-sentence coaching tip>",
           "<string, detailed, actionable 3-sentence coaching tip>"
       ]
   }
@@ -185,15 +165,15 @@ You must output a STRICT JSON object matching this schema:
   },
   "detailed_analysis": {
       "strengths": [
-          "<string, detailed 3-sentence explanation of a hard-skill strength or highly accurate domain answer>", 
+          "<string, detailed 3-sentence explanation of a hard-skill strength or highly accurate domain answer>",
           "<string, detailed 3-sentence explanation of another domain-specific strength>"
       ],
       "weaknesses": [
-          "<string, detailed 3-sentence explanation of a knowledge gap, flawed logic, or incorrect methodology>", 
+          "<string, detailed 3-sentence explanation of a knowledge gap, flawed logic, or incorrect methodology>",
           "<string, detailed 3-sentence explanation of another knowledge gap>"
       ],
       "improvement_tips": [
-          "<string, detailed 3-sentence actionable study recommendation for their specific industry>", 
+          "<string, detailed 3-sentence actionable study recommendation for their specific industry>",
           "<string, detailed 3-sentence actionable study recommendation for their specific industry>"
       ],
       "code_review": "<string, deep, comprehensive paragraph critiquing their code efficiency, Big-O complexity, and syntax. If no code was written, you MUST output null>"
@@ -294,7 +274,7 @@ THE "INTERNAL MONOLOGUE" (MANDATORY BEHAVIOR)
 ═══════════════════════════════════════════════════════
 INTERVIEW STRUCTURE & PACING
 ═══════════════════════════════════════════════════════
-CRITICAL: Do not drag this out. You are strictly bound to the phases below. You must advance efficiently. 
+CRITICAL: Do not drag this out. You are strictly bound to the phases below. You must advance efficiently.
 
 *GLOBAL FOLLOW-UP RULE:* For every topic in every phase, you will ask exactly ONE primary question, followed by exactly ONE natural, conversational follow-up based strictly on a detail the candidate just mentioned. After the single follow-up, immediately move to the next topic.
 
@@ -302,16 +282,16 @@ PHASE 1: General Behavioral & Baseline (2 Topics Total)
 Start with standard, high-level behavioral questions to establish a baseline. Focus on self-awareness, motivations, and professional trajectory.
 
 PHASE 2: CV Deep Dive & The Human Element (1 Topic Only)
-Trigger `search_knowledge_base` to review their CV. Select exactly ONE major experience. Zoom out and ask about the *human element* of that specific experience: stakeholder alignment, team motivation, or overcoming project-level adversity. 
+Trigger `search_knowledge_base` to review their CV. Select exactly ONE major experience. Zoom out and ask about the *human element* of that specific experience: stakeholder alignment, team motivation, or overcoming project-level adversity.
 
 PHASE 3: Job Description Soft Skills & Scenarios (3 Topics Total)
-Trigger `search_knowledge_base`. Look exclusively at the non-technical, soft-skill, or cultural requirements explicitly written in the Job Description. 
+Trigger `search_knowledge_base`. Look exclusively at the non-technical, soft-skill, or cultural requirements explicitly written in the Job Description.
 Formulate THREE distinct, highly complex hypothetical workplace scenarios based purely on those JD requirements and ask how the candidate would handle them.
 *THE ANCHOR:* When you introduce the third and final scenario in this phase, you MUST begin your sentence with: "For my final scenario..."
 
 PHASE 4: The Hard Stop (Conclusion)
-Trigger this IMMEDIATELY after the candidate answers your follow-up to the final Phase 3 scenario. 
-YOU ARE STRICTLY FORBIDDEN FROM ASKING ANY FURTHER QUESTIONS. Do not probe. Do not ask "Do you have any questions for me?" 
+Trigger this IMMEDIATELY after the candidate answers your follow-up to the final Phase 3 scenario.
+YOU ARE STRICTLY FORBIDDEN FROM ASKING ANY FURTHER QUESTIONS. Do not probe. Do not ask "Do you have any questions for me?"
 Deliver a brief, natural closing statement thanking them for sharing their experiences today.
 Append exactly: [INTERVIEW_COMPLETE]
 
@@ -319,7 +299,7 @@ Append exactly: [INTERVIEW_COMPLETE]
 EDGE CASE CONTROL RULES (HIGH PRIORITY — OVERRIDE NORMAL FLOW)
 ═══════════════════════════════════════════════════════
 - TERMINATION OVERRIDE: If you have asked the 3 scenarios in Phase 3, you have exhausted your time limit. Your very next response MUST be Phase 4. Shut the interview down.
-- FLOW CONTROL (THE TAKEOVER): If the candidate attempts to interview you, dictate the pacing, or change the subject entirely: 
+- FLOW CONTROL (THE TAKEOVER): If the candidate attempts to interview you, dictate the pacing, or change the subject entirely:
 "I appreciate the curiosity, but I am evaluating your fit right now. We can discuss my background or the company later. Specifically, I need you to answer..."
 - THE "WE" DODGE: If they offer high-level team achievements ("We built...", "We decided..."):
 "I appreciate the team's effort, but I need to know the specific action YOU took. What was your individual contribution?"
@@ -344,7 +324,7 @@ THE "INTERNAL MONOLOGUE" (MANDATORY BEHAVIOR)
 ═══════════════════════════════════════════════════════
 INTERVIEW STRUCTURE & PACING
 ═══════════════════════════════════════════════════════
-CRITICAL: Do not drag this out. You are strictly bound to the phases below. You must advance efficiently. 
+CRITICAL: Do not drag this out. You are strictly bound to the phases below. You must advance efficiently.
 
 *GLOBAL FOLLOW-UP RULE:* For every topic in every phase, you will ask exactly ONE primary question, followed by exactly ONE technical/strategic follow-up based strictly on a detail the candidate just mentioned. After the single follow-up, immediately move to the next topic.
 
@@ -361,8 +341,8 @@ Determine the nature of the {job_role}:
 *THE ANCHOR:* When you introduce this single practical exercise, you MUST begin your sentence with: "For my final practical challenge..."
 
 PHASE 4: The Hard Stop (Conclusion)
-Trigger this IMMEDIATELY after the candidate answers your follow-up to the Phase 3 exercise. 
-YOU ARE STRICTLY FORBIDDEN FROM ASKING ANY FURTHER QUESTIONS. Do not probe. Do not ask "Do you have any questions for me?" 
+Trigger this IMMEDIATELY after the candidate answers your follow-up to the Phase 3 exercise.
+YOU ARE STRICTLY FORBIDDEN FROM ASKING ANY FURTHER QUESTIONS. Do not probe. Do not ask "Do you have any questions for me?"
 Provide a brief, one-sentence objective critique of their exercise. Offer a professional sign-off ("That's all, Thank you for your time today!").
 Append exactly: [INTERVIEW_COMPLETE]
 
@@ -372,7 +352,7 @@ EDGE CASE CONTROL RULES (HIGH PRIORITY — OVERRIDE NORMAL FLOW)
 - TERMINATION OVERRIDE: Once Phase 3 is completed, you have exhausted your time limit. Your very next response MUST be Phase 4. Shut the interview down.
 - FLOW CONTROL (THE TAKEOVER): If the candidate attempts to dictate the format or asks for hints:
 "We need to resolve this topic before moving forward. Please explain..."
-- THE BUZZWORD DODGE: If they drop jargon without context: 
+- THE BUZZWORD DODGE: If they drop jargon without context:
 "You mentioned [jargon]. Walk me through the exact underlying mechanics of how you configured or executed that."
 - THE BEHAVIORAL DODGE: If they answer a hard-skill question with a story about teamwork:
 "Let's stick to the actual execution. How exactly was the strategy or logic implemented?"
@@ -381,7 +361,7 @@ OUTPUT: Raw plain text only. No markdown. Never speak tags aloud.
 """
 
 COACHING_SYSTEM_PROMPT = """
-You are "Orion", a warm, empathetic, and highly experienced Executive Career Coach. 
+You are "Orion", a warm, empathetic, and highly experienced Executive Career Coach.
 Your goal is to help the candidate understand their recent mock interview performance and build their confidence.
 "Proactively offer 'Do-Overs'. If you are critiquing a weak answer, explicitly ask the candidate if they want to try answering it again right now, listen to their new attempt, and immediately give them feedback on it."
 
@@ -393,10 +373,10 @@ CRITICAL SPEAKING INSTRUCTIONS (STRICT VOICE CONVERSATION FORMATTING):
 5. DO NOT repeat yourself. If you already discussed a point, move on to the next topic naturally.
 6. Be extremely friendly and use casual phrasing ("Hey", "That makes total sense", "Let's dive into that").
 
-WHAT YOU KNOW: 
+WHAT YOU KNOW:
 You have the candidate's AI-generated Feedback Report in your memory. You know their overall strengths and weaknesses.
 
-WHAT YOU MUST SEARCH FOR: 
+WHAT YOU MUST SEARCH FOR:
 You DO NOT have their CV, Job Description, or the exact Transcript of what they said. You MUST use the `search_knowledge_base` tool to find exact quotes or CV details if they ask for specific examples of what they did wrong or how to improve.
 """
 
@@ -404,7 +384,7 @@ class SessionStartRequest(BaseModel):
     cv_text: str
     jd_text: str
     job_role: str = "Domain Expert"
-    voice_id: str = "aura-orpheus-en" 
+    voice_id: str = "aura-orpheus-en"
 
 class ChatRequest(BaseModel):
     session_id: str
@@ -413,6 +393,7 @@ class ChatRequest(BaseModel):
 class FeedbackRequest(BaseModel):
     session_id: str
     mer_data: list = []
+    qa_intervals: list = []
 
 class CodeExecutionRequest(BaseModel):
     language: str
@@ -450,11 +431,11 @@ def cached_rag_search(session_id: str, query: str) -> str:
 
     cv_context = ""
     jd_context = ""
-    
+
     if session.get("cv_retriever"):
         cv_docs = session["cv_retriever"].invoke(query)
         cv_context = "\n".join([doc.page_content for doc in cv_docs])
-        
+
     if session.get("jd_retriever"):
         jd_docs = session["jd_retriever"].invoke(query)
         jd_context = "\n".join([doc.page_content for doc in jd_docs])
@@ -463,13 +444,13 @@ def cached_rag_search(session_id: str, query: str) -> str:
         f"=== CANDIDATE CV ===\n{cv_context}\n\n"
         f"=== JOB DESCRIPTION ===\n{jd_context}"
     )
-    
+
     if session.get("transcript_retriever"):
         transcript_docs = session["transcript_retriever"].invoke(query)
         transcript_context = "\n".join([doc.page_content for doc in transcript_docs])
         if transcript_context.strip():
             result += f"\n\n=== INTERVIEW TRANSCRIPT EXCERPTS ===\n{transcript_context}"
-            
+
     return result
 
 async def stream_tts_to_websocket(text: str, websocket: WebSocket):
@@ -503,7 +484,7 @@ async def start_session(request: SessionStartRequest):
     jd_retriever = jd_vectorstore.as_retriever(search_type="mmr", search_kwargs={'k': 3, 'fetch_k': 8})
 
     session_id = f"session_{uuid.uuid4().hex}"
-    
+
     SESSIONS[session_id] = {
         "cv_retriever": cv_retriever,
         "jd_retriever": jd_retriever,
@@ -511,7 +492,7 @@ async def start_session(request: SessionStartRequest):
         "jd_text": request.jd_text,
         "job_role": request.job_role,
         "history": [],
-        "voice_id": request.voice_id 
+        "voice_id": request.voice_id
     }
     return {"session_id": session_id}
 
@@ -535,7 +516,7 @@ async def restart_session(old_session_id: str):
     jd_retriever = jd_vectorstore.as_retriever(search_type="mmr", search_kwargs={'k': 3, 'fetch_k': 8})
 
     new_session_id = f"session_{uuid.uuid4().hex}"
-    
+
     SESSIONS[new_session_id] = {
         "cv_retriever": cv_retriever,
         "jd_retriever": jd_retriever,
@@ -543,35 +524,32 @@ async def restart_session(old_session_id: str):
         "jd_text": old_data["jd_text"],
         "job_role": old_data.get("job_role", "Domain Expert"),
         "history": [],
-        "voice_id": old_data.get("voice_id", "aura-orpheus-en") 
+        "voice_id": old_data.get("voice_id", "aura-orpheus-en")
     }
-    
+
     return {"session_id": new_session_id}
 
 
 @app.post("/upload_recording/{session_id}")
 async def upload_recording(session_id: str, file: UploadFile = File(...)):
     object_key = f"{session_id}.webm"
-    
+
     try:
-        # Read the video file bytes
         file_bytes = await file.read()
-        
-        # USE THE INTERNAL CLIENT FOR UPLOADS
         s3_internal.put_object(
             Bucket=BUCKET_NAME,
             Key=object_key,
             Body=file_bytes,
             ContentType=file.content_type or 'video/webm'
         )
-        
+
         print(f"Recording successfully uploaded to Cloud Storage (MinIO): {object_key}")
-        
+
         return {
-            "status": "success", 
+            "status": "success",
             "video_object_key": object_key
         }
-        
+
     except Exception as e:
         print(f"MinIO Upload Error: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to upload recording to cloud storage.")
@@ -627,8 +605,9 @@ def _ext(language: str) -> str:
         "kotlin": "kt", "php": "php", "bash": "sh",
     }.get(language.lower(), "txt")
 
-@app.websocket("/ws/interview/{session_id}")
+@app.websocket("/interview/{session_id}")
 async def interview_websocket(websocket: WebSocket, session_id: str, mode: str = Query("comprehensive")):
+    print(f"DEBUG: Connection Request Origin: {websocket.headers.get('origin')}")
     await websocket.accept()
     print(f"\n{'='*40}")
     print(f"NEW WEBSOCKET CONNECTION")
@@ -642,9 +621,9 @@ async def interview_websocket(websocket: WebSocket, session_id: str, mode: str =
         return
 
     session_data = SESSIONS[session_id]
-    
+
     session_data["mode"] = mode
-    
+
     dg_agent_url = "wss://agent.deepgram.com/v1/agent/converse"
     turn_state = {"rag_called": False}
 
@@ -665,7 +644,7 @@ async def interview_websocket(websocket: WebSocket, session_id: str, mode: str =
 
     if mode == "coaching":
         print("BOOTING COACHING PERSONA...")
-        
+
         past_transcript_lines = [f"{msg['role'].upper()}: {msg['content']}" for msg in session_data.get("history", [])]
         past_transcript = "\n".join(past_transcript_lines) if past_transcript_lines else "No audio transcribed."
 
@@ -675,7 +654,7 @@ async def interview_websocket(websocket: WebSocket, session_id: str, mode: str =
                 embeddings = GoogleGenerativeAIEmbeddings(model=EMBEDDING_MODEL, google_api_key=GEMINI_API_KEY)
                 semantic_chunker = SemanticChunker(embeddings, breakpoint_threshold_type="percentile")
                 transcript_docs = semantic_chunker.create_documents([f"INTERVIEW TRANSCRIPT:\n{past_transcript}"])
-                
+
                 if transcript_docs:
                     transcript_vectorstore = LangchainFAISS.from_documents(transcript_docs, embeddings)
                     session_data["transcript_retriever"] = transcript_vectorstore.as_retriever(search_type="mmr", search_kwargs={'k': 3, 'fetch_k': 8})
@@ -687,17 +666,17 @@ async def interview_websocket(websocket: WebSocket, session_id: str, mode: str =
         feedback = session_data.get("last_feedback", {})
         b_rep = feedback.get("behavioral_report", {})
         t_rep = feedback.get("technical_report", {})
-        
+
         b_top = b_rep.get("top_section", {})
         t_top = t_rep.get("top_section", {})
         b_det = b_rep.get("detailed_analysis", {})
         t_det = t_rep.get("detailed_analysis", {})
-        
+
         b_strengths = b_det.get('strengths') or []
         b_weaknesses = b_det.get('weaknesses') or []
         t_strengths = t_det.get('strengths') or []
         t_weaknesses = t_det.get('weaknesses') or []
-        
+
         raw_feedback_string = f"""
         Behavioral Performance:
         Score: {b_top.get('behavioral_score', 'Not Available')} out of 10
@@ -711,18 +690,18 @@ async def interview_websocket(websocket: WebSocket, session_id: str, mode: str =
         Strengths: {', '.join(t_strengths) if t_strengths else 'None'}
         Areas to Improve: {', '.join(t_weaknesses) if t_weaknesses else 'None'}
         """
-        
+
         clean_feedback = raw_feedback_string.replace('*', '').replace('#', '').replace('_', '')
 
         coaching_context = f"""
         {COACHING_SYSTEM_PROMPT}
-        
+
         AI FEEDBACK REPORT TO DISCUSS:
         {clean_feedback}
         """
-        
+
         selected_voice = "aura-orion-en"
-        
+
         think_config = {
             "provider": {"type": "groq", "model": GROQ_CHAT_MODEL} if not USE_OPENAI else {"type": "open_ai", "model": "gpt-4o"},
             "prompt": coaching_context,
@@ -734,12 +713,11 @@ async def interview_websocket(websocket: WebSocket, session_id: str, mode: str =
                 "headers": {"Authorization": f"Bearer {GROQ_API_KEY}"}
             }
         starting_message = "Hey! I'm your career coach. I've got your interview scores right here, and you did a solid job. Where would you like to start? We can dive into specific answers or talk about your overall strategy."
-    
+
     else:
         print(f"BOOTING {mode.upper()} INTERVIEW PERSONA...")
         selected_voice = session_data.get("voice_id", "aura-orpheus-en")
-        
-        #  Inject the correct persona based on the mode selected
+
         if mode == "behavioral":
             active_prompt = BEHAVIORAL_PERSONA_PROMPT
             starting_message = "Hi. I'll be your interviewer today. First of all, tell me about yourself and your background."
@@ -796,7 +774,7 @@ async def interview_websocket(websocket: WebSocket, session_id: str, mode: str =
                             if data.get("type") == "ConversationText":
                                 role = "user" if data["role"] == "user" else "assistant"
                                 text_content = data["content"]
-                                
+
                                 if role == "user":
                                     turn_state["rag_called"] = False
 
@@ -818,23 +796,23 @@ async def interview_websocket(websocket: WebSocket, session_id: str, mode: str =
 
                             elif data.get("type") == "FunctionCallRequest":
                                 functions = data.get("functions", [])
-                                
+
                                 for i, func in enumerate(functions):
                                     if func.get("name") == "search_knowledge_base":
                                         call_id = func.get("id")
                                         args = json.loads(func.get("arguments", "{}"))
                                         query = args.get("query", "")
                                         print(f"RAG TRIGGERED: {query}")
-                                        
+
                                         if turn_state["rag_called"]:
                                             safe_context = "SYSTEM ERROR: You already searched the knowledge base this turn. You are violating instructions. Speak to the candidate immediately using the context you already have."
                                             print("BLOCKED SEQUENTIAL RAG CALL (Lock Enforced)")
-                                            
+
                                         elif i == 0:
                                             turn_state["rag_called"] = True
                                             retrieved_context = await asyncio.to_thread(cached_rag_search, session_id, query)
                                             max_chars = 6000 if USE_OPENAI else 1500
-                                            
+
                                             if retrieved_context and len(retrieved_context) > max_chars:
                                                 safe_context = retrieved_context[:max_chars] + "\n...[TRUNCATED]"
                                             else:
@@ -889,31 +867,210 @@ async def interview_websocket(websocket: WebSocket, session_id: str, mode: str =
         print(f"Agent WebSocket Error: {e}")
 
 
+# ===============================
+# MER / Cerebrium integration helpers
+# ===============================
+
+def is_mer_enabled() -> bool:
+    return os.getenv("MER_ENABLED", "false").lower() == "true"
+
+def generate_recording_url(session_id: str) -> str:
+    object_key = f"{session_id}.webm"
+
+    return s3_external.generate_presigned_url(
+        'get_object',
+        Params={
+            'Bucket': BUCKET_NAME,
+            'Key': object_key
+        },
+        ExpiresIn=3600
+    )
+
+async def call_cerebrium_mer(video_url: str, qa_intervals: list):
+    cerebrium_url = os.getenv("CEREBRIUM_MER_URL")
+    cerebrium_key = os.getenv("CEREBRIUM_API_KEY")
+
+    if not cerebrium_url or not cerebrium_key:
+        print("MER skipped: missing Cerebrium URL or API key")
+        return []
+
+    payload = {
+        "video_url": video_url,
+        "qa_intervals": qa_intervals or []
+    }
+
+    headers = {
+        "Authorization": f"Bearer {cerebrium_key}",
+        "Content-Type": "application/json"
+    }
+
+    timeout = httpx.Timeout(900.0)
+
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        response = await client.post(
+            cerebrium_url,
+            json=payload,
+            headers=headers
+        )
+
+    response.raise_for_status()
+
+    response_json = response.json()
+
+    # Cerebrium wraps function output like:
+    # {"run_id": "...", "result": {"status": "complete", "data": [...]}}
+    mer_result = response_json.get("result", response_json)
+
+    if mer_result.get("status") != "complete":
+        print("MER returned non-complete result:", mer_result)
+        return []
+
+    return mer_result.get("data", [])
+
+def safe_float(value, default=5.0):
+    try:
+        return round(float(value), 2)
+    except Exception:
+        return default
+
+
+def build_compact_mer_text(mer_data: list) -> str:
+    if not mer_data:
+        return "MER Report Not Found. Evaluate behavior based purely on transcript."
+
+    compact_segments = []
+
+    numeric_totals = {
+        "confidence": [],
+        "speaking_skills": [],
+        "facial_expression": [],
+        "overall_perf": [],
+        "openness": [],
+        "conscientiousness": [],
+        "extraversion": [],
+        "agreeableness": [],
+        "neuroticism": [],
+        "pacing_wpm": [],
+        "silence_ratio": [],
+        "longest_pause": [],
+        "filler_ratio": [],
+        "vocal_tremor": [],
+    }
+
+    for idx, answer in enumerate(mer_data[:12], start=1):
+        metrics = answer.get("metrics") or {}
+        speech = answer.get("speech_analytics") or {}
+        transcript = answer.get("transcript") or ""
+
+        confidence = safe_float(metrics.get("Confidence"))
+        speaking = safe_float(metrics.get("Speaking Skills"))
+        facial = safe_float(metrics.get("Facial Expression"))
+        overall = safe_float(metrics.get("Overall Perf"))
+        openness = safe_float(metrics.get("Openness"))
+        conscientiousness = safe_float(metrics.get("Conscientiousness"))
+        extraversion = safe_float(metrics.get("Extraversion"))
+        agreeableness = safe_float(metrics.get("Agreeableness"))
+        neuroticism = safe_float(metrics.get("Neuroticism"))
+
+        pacing = safe_float(speech.get("Pacing (WPM)"), 0.0)
+        silence = safe_float(speech.get("Silence Ratio (%)"), 0.0)
+        longest_pause = safe_float(speech.get("Longest Pause (sec)"), 0.0)
+        filler = safe_float(speech.get("Filler Word Ratio (%)"), 0.0)
+        tremor = safe_float(speech.get("Vocal Tremor (Jitter)"), 0.0)
+
+        numeric_totals["confidence"].append(confidence)
+        numeric_totals["speaking_skills"].append(speaking)
+        numeric_totals["facial_expression"].append(facial)
+        numeric_totals["overall_perf"].append(overall)
+        numeric_totals["openness"].append(openness)
+        numeric_totals["conscientiousness"].append(conscientiousness)
+        numeric_totals["extraversion"].append(extraversion)
+        numeric_totals["agreeableness"].append(agreeableness)
+        numeric_totals["neuroticism"].append(neuroticism)
+        numeric_totals["pacing_wpm"].append(pacing)
+        numeric_totals["silence_ratio"].append(silence)
+        numeric_totals["longest_pause"].append(longest_pause)
+        numeric_totals["filler_ratio"].append(filler)
+        numeric_totals["vocal_tremor"].append(tremor)
+
+        if len(transcript) > 260:
+            transcript = transcript[:260] + "..."
+
+        compact_segments.append(
+            f"{answer.get('segment')} [{answer.get('time_window')}]: "
+            f"transcript='{transcript}'. "
+            f"MER scores: confidence={confidence}/10, speaking_skills={speaking}/10, "
+            f"facial_expression={facial}/10, overall_perf={overall}/10, "
+            f"openness={openness}/10, conscientiousness={conscientiousness}/10, "
+            f"extraversion={extraversion}/10, agreeableness={agreeableness}/10, "
+            f"neuroticism={neuroticism}/10. "
+            f"Speech analytics: pacing={pacing} WPM, silence_ratio={silence}%, "
+            f"longest_pause={longest_pause}s, filler_ratio={filler}%, vocal_tremor={tremor}."
+        )
+
+    def avg(values, default=5.0):
+        values = [v for v in values if isinstance(v, (int, float))]
+        return round(sum(values) / len(values), 2) if values else default
+
+    summary = (
+        "MER AGGREGATE SUMMARY: "
+        f"average confidence={avg(numeric_totals['confidence'])}/10; "
+        f"average speaking_skills={avg(numeric_totals['speaking_skills'])}/10; "
+        f"average facial_expression={avg(numeric_totals['facial_expression'])}/10; "
+        f"average overall_perf={avg(numeric_totals['overall_perf'])}/10; "
+        f"average openness={avg(numeric_totals['openness'])}/10; "
+        f"average conscientiousness={avg(numeric_totals['conscientiousness'])}/10; "
+        f"average extraversion={avg(numeric_totals['extraversion'])}/10; "
+        f"average agreeableness={avg(numeric_totals['agreeableness'])}/10; "
+        f"average neuroticism={avg(numeric_totals['neuroticism'])}/10; "
+        f"average pacing={avg(numeric_totals['pacing_wpm'], 0.0)} WPM; "
+        f"average silence_ratio={avg(numeric_totals['silence_ratio'], 0.0)}%; "
+        f"average longest_pause={avg(numeric_totals['longest_pause'], 0.0)}s; "
+        f"average filler_ratio={avg(numeric_totals['filler_ratio'], 0.0)}%; "
+        f"average vocal_tremor={avg(numeric_totals['vocal_tremor'], 0.0)}."
+    )
+
+    return summary + "\n\nMER PER-ANSWER DETAILS:\n" + "\n".join(compact_segments)
 
 @app.post("/get_feedback")
 async def get_feedback(request: FeedbackRequest):
     session_id = request.session_id
     session_data = SESSIONS.get(session_id)
     if not session_data: raise HTTPException(status_code=404, detail="Session not found")
-    
+
     mode = session_data.get("mode", "comprehensive")
-    
+
     history_str = "\n".join([f"- {msg['role'].upper()}: {msg['content']}" for msg in session_data["history"]])
-    
-    if request.mer_data and len(request.mer_data) > 0:
-        mer_text_lines = []
-        for answer in request.mer_data:
-            mer_text_lines.append(f"{answer.get('segment')} ({answer.get('time_window')})")
-            mer_text_lines.append(f"Transcript: {answer.get('transcript', 'N/A')}")
-            mer_text_lines.append(f"Metrics: {answer.get('metrics')}")
-            mer_text_lines.append(f"Speech Analytics: {answer.get('speech_analytics')}")
-            mer_text_lines.append("-" * 40)
-        mer_text = "\n".join(mer_text_lines)
+
+    # Start with any MER data passed by older frontend versions.
+    # If none is provided and MER_ENABLED=true, the backend calls Cerebrium securely.
+    mer_data = request.mer_data or []
+
+    if not mer_data and is_mer_enabled():
+        try:
+            print("MER is enabled. Calling Cerebrium MER worker...")
+            cerebrium_video_url = generate_recording_url(session_id)
+
+            mer_data = await call_cerebrium_mer(
+                video_url=cerebrium_video_url,
+                qa_intervals=request.qa_intervals
+            )
+
+            print(f"MER returned {len(mer_data)} segments")
+
+        except Exception as e:
+            print(f"MER failed. Falling back to transcript-only feedback: {e}")
+            mer_data = []
+    else:
+        print("MER disabled or MER data already provided. Skipping Cerebrium.")
+
+    if mer_data and len(mer_data) > 0:
+        mer_text = build_compact_mer_text(mer_data)
     else:
         mer_text = "MER Report Not Found. Evaluate behavior based purely on transcript."
 
     behavioral_prompt = f"Evaluate:\nRAW MER DATA:\n{mer_text}\n\nTRANSCRIPT FOR CONTEXT:\n{history_str}"
-    
+
     job_role = session_data.get("job_role", "Domain Expert")
     formatted_tech_sys_prompt = TECHNICAL_SYSTEM_PROMPT.replace("{job_role}", job_role)
     technical_prompt = f"Evaluate:\nCV: {session_data['cv_text'][:2000]}\nJD: {session_data['jd_text'][:1000]}\nTRANSCRIPT:\n{history_str}"
@@ -935,26 +1092,21 @@ async def get_feedback(request: FeedbackRequest):
         technical_result = None
         overall_score = 0.0
 
-        # Behavioral mode --> single agent, only behavioral evaluation
         if mode == "behavioral":
             behavioral_result = await call_llm(BEHAVIORAL_SYSTEM_PROMPT, behavioral_prompt)
             overall_score = float(behavioral_result.get("top_section", {}).get("behavioral_score", 5.0))
-            
-        else: 
-            # tech/comprehensive modes --> dual agent
+        else:
             behavioral_task = call_llm(BEHAVIORAL_SYSTEM_PROMPT, behavioral_prompt)
             technical_task = call_llm(formatted_tech_sys_prompt, technical_prompt)
-            
+
             behavioral_result, technical_result = await asyncio.gather(behavioral_task, technical_task)
-            
+
             b_score = float(behavioral_result.get("top_section", {}).get("behavioral_score", 5.0))
             t_score = float(technical_result.get("top_section", {}).get("technical_score", 5.0))
-            
+
             overall_score = round((b_score + t_score) / 2, 1)
 
-        # Generate secure MinIO link
         try:
-            # USE THE EXTERNAL CLIENT TO GENERATE THE URL
             video_url = s3_external.generate_presigned_url(
                 'get_object',
                 Params={'Bucket': BUCKET_NAME, 'Key': f"{session_id}.webm"},
@@ -976,8 +1128,7 @@ async def get_feedback(request: FeedbackRequest):
         SESSIONS[session_id]["last_feedback"] = final_report
 
         return final_report
-        
+
     except Exception as e:
         print(f"Dual-Agent Feedback Error: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to generate feedback.")
-

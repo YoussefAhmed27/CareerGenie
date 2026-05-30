@@ -13,10 +13,11 @@ const { errorHandler } = require("./middleware/errorHandler");
 const { csrfProtect } = require("./middleware/csrf");
 
 const app = express();
+app.set('trust proxy', 1);
 
 const allowedOrigins = process.env.CLIENT_ORIGIN 
     ? process.env.CLIENT_ORIGIN.split(',') 
-    : ['http://localhost:5173'];
+    : [process.env.CLIENT_ORIGIN];
 
 app.use(helmet({
     crossOriginResourcePolicy: false

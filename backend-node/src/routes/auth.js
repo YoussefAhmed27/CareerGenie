@@ -421,7 +421,8 @@ router.post("/forgot-password", async (req, res, next) => {
                 [candidate.candidate_id, tokenHash]
             );
 
-            const resetLink = `http://localhost:5173/reset-password?token=${rawToken}`;
+            
+            const resetLink = `{process.env.CLIENT_ORIGIN}/reset-password?token=${rawToken}`;
 
             await sendResetEmail(candidate.email, resetLink);
         }

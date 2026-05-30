@@ -1,20 +1,7 @@
 const pool = require("../db");
-// Import your internal client for deleting files
 const { s3Internal } = require("../utils/s3Client");
 const { S3Client, GetObjectCommand, DeleteObjectCommand } = require("@aws-sdk/client-s3");
 const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
-
-// THE FIX: A dedicated client strictly for generating public, mobile-ready URLs.
-// This forces the AWS SDK to build the security hash using your Cloudflare domain.
-const s3PublicLinker = new S3Client({
-    endpoint: "https://storage.careersgenie.tech",
-    region: "us-east-1",
-    credentials: {
-        accessKeyId: "admin",         // Ensure these match your MinIO credentials
-        secretAccessKey: "password123"
-    },
-    forcePathStyle: true // Required for MinIO
-});
 
 exports.saveInterview = async (req, res, next) => {
     try {
@@ -153,16 +140,14 @@ exports.getInterviewById = async (req, res, next) => {
         const session = result.rows[0];
         let video_url = null;
 
-        // Generates a mathematically valid Cloudflare URL that phones can read
         if (session.video_object_key) {
             const command = new GetObjectCommand({
-                Bucket: "interview-recordings",
+                Bucket: "careergenie-prod-interviewrecordings",
                 Key: session.video_object_key,
             });
-            video_url = await getSignedUrl(s3PublicLinker, command, { expiresIn: 3600 });
+            video_url = await getSignedUrl(s3Internal, command, { expiresIn: 3600 });
         }
 
-        // Safely parses the feedback string so the mobile UI doesn't crash
         let parsedFeedback = session.feedback_data;
         if (typeof parsedFeedback === 'string') {
             try { 
@@ -213,7 +198,7 @@ exports.deleteInterview = async (req, res, next) => {
 
         if (video_object_key) {
             const command = new DeleteObjectCommand({
-                Bucket: "interview-recordings",
+                Bucket: "careergenie-prod-interviewrecordings",
                 Key: video_object_key,
             });
             await s3Internal.send(command);
