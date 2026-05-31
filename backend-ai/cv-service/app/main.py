@@ -1,9 +1,19 @@
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routes.cv_routes import router as cv_router
 from app.routes.tailoring_routes import router as tailoring_router
 from app.generation.generation_routes import router as generation_router
 
+
+def get_allowed_origins() -> list[str]:
+    raw_origins = os.getenv(
+        "CV_ALLOWED_ORIGINS",
+        "http://localhost:5173,http://127.0.0.1:5173",
+    )
+    origins = [origin.strip().rstrip("/") for origin in raw_origins.split(",") if origin.strip()]
+    return [origin for origin in origins if origin != "*"]
 
 
 app = FastAPI(
@@ -13,7 +23,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=get_allowed_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -27,3 +37,7 @@ app.include_router(generation_router)
 @app.get("/")
 def root():
     return {"message": "CV Service is running"}
+
+@app.get("/health")
+def health():
+    return {"status": "ok", "service": "cv-service"}

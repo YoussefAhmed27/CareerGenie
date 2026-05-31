@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   AreaChart, Area,
@@ -475,7 +475,7 @@ const StrengthsWeaknessesPanel = ({ allMetrics }: { allMetrics: { name: string; 
 const AnalyticsDashboard = () => {
   const navigate = useNavigate();
   const [data, setData] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [timeframe, setTimeframe] = useState('all');
   const [role, setRole] = useState('all');
   const [primaryMetric, setPrimaryMetric] = useState('overallScore');

@@ -90,8 +90,26 @@ type ApiErrorPayload = {
   error?: string;
 };
 
+const resolveCvServiceUrl = () => {
+  const configuredUrl = import.meta.env.VITE_CV_SERVICE_URL?.trim();
+
+  if (configuredUrl) {
+    return configuredUrl.replace(/\/+$/, "");
+  }
+
+  if (import.meta.env.PROD) {
+    throw new Error("VITE_CV_SERVICE_URL is required in production.");
+  }
+
+  return "http://localhost:8010";
+};
+
+const CV_SERVICE_URL = resolveCvServiceUrl();
+
+const buildCvServiceUrl = (path: string) => `${CV_SERVICE_URL}${path}`;
+
 const cvClient = axios.create({
-  baseURL: "",
+  baseURL: CV_SERVICE_URL,
 });
 
 const getApiErrorMessage = (error: unknown, fallback: string) => {
@@ -144,7 +162,7 @@ export const tailorCv = async (file: File, jdText: string) => {
 };
 
 export const getTailoredCvDownloadUrl = (cvId: string, format: "pdf" | "docx") =>
-  `/tailor/download/${format}?cv_id=${encodeURIComponent(cvId)}`;
+  buildCvServiceUrl(`/tailor/download/${format}?cv_id=${encodeURIComponent(cvId)}`);
 
 export const generateCvFromScratch = async (payload: CVGenerationRequest) => {
   try {
@@ -160,4 +178,4 @@ export const generateCvFromScratch = async (payload: CVGenerationRequest) => {
 };
 
 export const getGeneratedCvDownloadUrl = (cvId: string, format: "pdf" | "docx") =>
-  `/generation/download/${format}?cv_id=${encodeURIComponent(cvId)}`;
+  buildCvServiceUrl(`/generation/download/${format}?cv_id=${encodeURIComponent(cvId)}`);

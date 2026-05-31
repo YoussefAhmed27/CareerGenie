@@ -38,8 +38,8 @@ const Profile: React.FC = () => {
 
     const [message, setMessage] = useState("");
     const [error, setError] = useState("");
-    const [photoFile, setPhotoFile] = useState<File | null>(null);
-    const [cvFile, setCvFile] = useState<File | null>(null);
+    const [, setPhotoFile] = useState<File | null>(null);
+    const [, setCvFile] = useState<File | null>(null);
     const [loading, setLoading] = useState(true);
     const [photoPreviewUrl, setPhotoPreviewUrl] = useState("");
     const [cvPreviewUrl, setCvPreviewUrl] = useState("");
