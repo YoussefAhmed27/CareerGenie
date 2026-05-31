@@ -66,13 +66,18 @@ npm run dev
 python -m uvicorn main:app --port 8000
 ```
 
-**5. AI Proctor Server (Run in `backend-ai/`):**
+**5. CV Assistant Service (Run in `backend-ai/cv-service/`):**
+```bash
+python -m uvicorn app.main:app --port 8002
+```
+
+**6. AI Proctor Server (Run in `backend-ai/`):**
 ```bash
 .\venv\Scripts\Activate.ps1
 python proctor_server.py
 ```
 
-**6. AI MER Server (Run in `backend-ai/`):**
+**7. AI MER Server (Run in `backend-ai/`):**
 ```bash
 conda run -n careergenie python mer_server.py
 ```
