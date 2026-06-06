@@ -22,4 +22,31 @@ function requireAuth(req, res, next) {
     }
 }
 
-module.exports = { requireAuth };
+function requireHrAuth(req, res, next) {
+    try {
+        const header = req.headers.authorization || "";
+        const token = header.startsWith("Bearer ") ? header.slice(7) : null;
+
+        if (!token) {
+            return res.status(401).json({ error: "Missing HR token" });
+        }
+
+        const payload = jwt.verify(token, process.env.JWT_SECRET);
+
+        if (!payload || !payload.hr_user_id) {
+            return res.status(401).json({ error: "Invalid HR token" });
+        }
+
+        req.hrUser = {
+            id: payload.hr_user_id,
+            email: payload.email,
+            domain: payload.domain
+        };
+
+        next();
+    } catch (err) {
+        return res.status(401).json({ error: "Invalid HR token" });
+    }
+}
+
+module.exports = { requireAuth, requireHrAuth };

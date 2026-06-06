@@ -4,9 +4,15 @@ import { textToVisemes } from '../utils/visemeMapper';
 import { uploadInterviewRecording } from '../api/interviewService';
 
 // --- DYNAMIC AI URL ---
-const AI_BASE_URL = import.meta.env.VITE_AI_URL || 'http://127.0.0.1:8000';
+const AI_BASE_URL = import.meta.env.VITE_AI_URL || import.meta.env.VITE_AI_SERVICE_URL || 'http://127.0.0.1:8000';
+const AI_WS_URL = import.meta.env.VITE_AI_WS_URL;
 
 function buildInterviewWsUrl(sessionId, mode) {
+  if (AI_WS_URL) {
+    const cleanWsBase = AI_WS_URL.replace(/\/+$/, '');
+    return `${cleanWsBase}/${sessionId}?mode=${mode}`;
+  }
+
   const cleanBase = AI_BASE_URL.replace(/\/+$/, '');
   const wsBase = cleanBase
     .replace(/^https:\/\//, 'wss://')

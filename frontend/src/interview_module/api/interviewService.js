@@ -263,3 +263,31 @@ export const getAnalyticsData = async (timeframe, role) => {
     throw error;
   }
 };
+
+export const saveHrInterviewResult = async (token, payload) => {
+  try {
+    const csrfRes = await fetch(`${NODE_BASE_URL}/auth/csrf`, { credentials: 'include' });
+    if (!csrfRes.ok) throw new Error("Could not fetch CSRF token");
+    const csrfData = await csrfRes.json();
+
+    const response = await fetch(`${NODE_BASE_URL}/api/hr/public/ai-interviews/${token}/result`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': csrfData.csrfToken
+      },
+      credentials: 'include',
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const errData = await response.json();
+      throw new Error(errData.error || 'Failed to save HR interview result');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Save HR Interview Error:", error);
+    throw error;
+  }
+};

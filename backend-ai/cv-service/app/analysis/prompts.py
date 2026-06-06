@@ -54,6 +54,7 @@ Your review MUST sound like an expert human recruiter evaluating if this candida
 ##  JSON OUTPUT SCHEMA
 You MUST return ONLY valid JSON matching this exact structure:
 {{
+  "candidate_name": "<Candidate's full name exactly as written in the CV, or null if unavailable>",
   "overall_cv_score": <int 0-100>,
   "job_alignment_score": <int 0-100>,
   "summary": "<Detailed recruiter-style evaluation comparing the candidate against the role/industry standards>",
@@ -95,6 +96,7 @@ You MUST return ONLY valid JSON matching this exact structure:
 }}
 """
 
+
 def build_system_prompt(jd_text: str = None) -> str:
     if jd_text:
         jd_instruction = (
@@ -108,5 +110,5 @@ def build_system_prompt(jd_text: str = None) -> str:
             "general industry standards for their apparent seniority and field. "
             "Estimate job_alignment_score based on typical market expectations."
         )
-        
+
     return ATS_SYSTEM_PROMPT.replace("{JD_INSTRUCTION}", jd_instruction)

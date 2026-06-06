@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react'; 
+import React, { useEffect, useState, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 
 import Login from "./components/Login";
@@ -6,6 +6,10 @@ import Home from "./components/Home-page";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import HrDashboard from "./components/Hr-dashboard";
+import HrLogin from "./pages/HR/HrLogin";
+import HrLanding from "./pages/HR/HrLanding";
+import PublicAIInterviewInvite from "./pages/HR/PublicAIInterviewInvite";
+import LiveInterviewRoom from "./pages/HR/LiveInterviewRoom";
 import Profile from "./pages/Profile";
 import InterviewHistory from "./pages/InterviewHistory";
 import InterviewDetail from "./pages/InterviewDetail";
@@ -20,8 +24,8 @@ import Chat from "./interview_module/components/Chat";
 import FeedbackDisplay from "./interview_module/components/FeedbackDisplay";
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const token = localStorage.getItem('token'); 
-  return token ? <>{children}</> : <Navigate to="/login" />; 
+  const token = localStorage.getItem('token');
+  return token ? <>{children}</> : <Navigate to="/login" />;
 };
 
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {
@@ -29,9 +33,15 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   return token ? <Navigate to="/" /> : <>{children}</>;
 };
 
+const HrProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const token = localStorage.getItem('hr_token');
+  const isValid = token && token !== 'null' && token !== 'undefined';
+  return isValid ? <>{children}</> : <Navigate to="/hr-login" />;
+};
+
 const App = () => {
   const [isWakingUp, setIsWakingUp] = useState(true);
-  const hasFetched = useRef(false); 
+  const hasFetched = useRef(false);
 
   useEffect(() => {
     if (hasFetched.current) return;
@@ -47,11 +57,11 @@ const App = () => {
 
         const response = await fetch(`${NODE_BASE_URL}/auth/refresh`, {
           method: 'POST',
-          headers: { 
+          headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-Token': csrfToken 
+            'X-CSRF-Token': csrfToken
           },
-          credentials: 'include' 
+          credentials: 'include'
         });
 
         if (response.ok) {
@@ -102,9 +112,18 @@ const App = () => {
             </PublicRoute>
           }
         />
+
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/hr-dashboard" element={<ProtectedRoute><HrDashboard /></ProtectedRoute>} />
+
+        <Route path="/hr" element={<HrLanding />} />
+        <Route path="/hr-login" element={<HrLogin />} />
+        <Route path="/hr-dashboard" element={<HrProtectedRoute><HrDashboard /></HrProtectedRoute>} />
+        <Route path="/hr-interview/:token" element={<PublicAIInterviewInvite />} />
+        <Route path="/hr-interview/session" element={<Chat />} />
+        <Route path="/hr-live/:token" element={<LiveInterviewRoom role="candidate" />} />
+        <Route path="/hr-live-room/:roomId" element={<HrProtectedRoute><LiveInterviewRoom role="hr" /></HrProtectedRoute>} />
+
         <Route path="/interview/setup" element={<ProtectedRoute><Setup /></ProtectedRoute>} />
         <Route path="/interview/session" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
         <Route path="/interview/feedback" element={<ProtectedRoute><FeedbackDisplay /></ProtectedRoute>} />

@@ -100,8 +100,7 @@ function normalizeScore(value) {
 
 function statusFromScore(score) {
   if (score >= 80) return "Recommended";
-  if (score >= 60) return "Review";
-  return "Rejected";
+  return "Review";
 }
 
 function nameFromFilename(filename) {
