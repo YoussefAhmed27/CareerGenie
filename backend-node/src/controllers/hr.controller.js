@@ -1,6 +1,8 @@
 const pool = require("../db");
 const { Blob } = require("buffer");
 const crypto = require("crypto");
+const { DeleteObjectCommand } = require("@aws-sdk/client-s3");
+const { s3Internal } = require("../utils/s3Client");
 const {
   sendAIInterviewInvitationEmail,
   sendLiveInterviewInvitationEmail,
@@ -18,6 +20,22 @@ const HR_INVITE_BASE_URL = (process.env.HR_INVITE_BASE_URL || process.env.CLIENT
 const WHEREBY_API_KEY = process.env.WHEREBY_API_KEY || "";
 const WHEREBY_API_URL = (process.env.WHEREBY_API_URL || "https://api.whereby.dev/v1").replace(/\/+$/, "");
 const WORKSPACE_INVITE_EXPIRES_DAYS = Number(process.env.WORKSPACE_INVITE_EXPIRES_DAYS || 14);
+const RECORDINGS_BUCKET = process.env.DO_SPACES_BUCKET || "careergenie-prod-interviewrecordings";
+
+async function deleteRecordingObjects(videoKeys) {
+  const keys = [...new Set((videoKeys || []).filter(Boolean))];
+
+  for (const key of keys) {
+    try {
+      await s3Internal.send(new DeleteObjectCommand({
+        Bucket: RECORDINGS_BUCKET,
+        Key: key,
+      }));
+    } catch (err) {
+      console.warn(`[HR] Failed to delete recording object "${key}":`, err.message || err);
+    }
+  }
+}
 
 async function getWorkspaceForHrUser(hrUserId) {
   const result = await pool.query(
@@ -466,6 +484,15 @@ exports.deleteJob = async (req, res, next) => {
       return res.status(409).json({ error: "Closed job openings can only be viewed or reopened." });
     }
 
+    const recordingKeys = await pool.query(
+      `SELECT DISTINCT r.video_object_key
+       FROM hr_ai_interview_result r
+       WHERE r.job_id = $1
+         AND r.video_object_key IS NOT NULL`,
+      [job_id]
+    );
+    await deleteRecordingObjects(recordingKeys.rows.map((row) => row.video_object_key));
+
     await pool.query(`DELETE FROM job_opening WHERE job_id = $1 AND workspace_id = $2`, [job_id, workspace.workspace_id]);
     res.json({ message: "Job deleted" });
   } catch (err) {
@@ -602,6 +629,15 @@ exports.deleteCandidate = async (req, res, next) => {
     if (current.rows[0]?.job_status === "Closed") {
       return res.status(409).json({ error: "This job opening is closed." });
     }
+    const recordingKeys = await pool.query(
+      `SELECT DISTINCT video_object_key
+       FROM hr_ai_interview_result
+       WHERE job_candidate_id = $1
+         AND video_object_key IS NOT NULL`,
+      [job_candidate_id]
+    );
+    await deleteRecordingObjects(recordingKeys.rows.map((row) => row.video_object_key));
+
     const result = await pool.query(
       `DELETE FROM job_candidate
        USING job_opening j
