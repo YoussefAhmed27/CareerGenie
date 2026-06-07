@@ -35,6 +35,7 @@ export async function registerHr(data: any) {
       "Content-Type": "application/json",
       "X-CSRF-Token": csrf
     },
+    credentials: "include",
     body: JSON.stringify(data),
   });
   if (!res.ok) throw new Error((await res.json()).error || "Registration failed");
@@ -52,6 +53,7 @@ export async function loginHr(data: any) {
       "Content-Type": "application/json",
       "X-CSRF-Token": csrf
     },
+    credentials: "include",
     body: JSON.stringify(data),
   });
   if (!res.ok) throw new Error((await res.json()).error || "Login failed");
