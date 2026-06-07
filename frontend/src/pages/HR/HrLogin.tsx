@@ -1,7 +1,7 @@
 // @ts-nocheck
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Mail, Lock, User, ArrowRight, Loader2 } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, Loader2, ChevronDown } from 'lucide-react';
 import { Button, Card } from '../../components/HR/HrUIComponents';
 import { fetchWorkspaceInvitation, loginHr, registerHr } from '../../services/hrService';
 
@@ -9,7 +9,7 @@ const HrLogin = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const inviteToken = searchParams.get('invite') || '';
-  const [isLogin, setIsLogin] = useState(true);
+  const [isLogin, setIsLogin] = useState(searchParams.get('mode') !== 'register');
   const [loading, setLoading] = useState(false);
   const [inviteLoading, setInviteLoading] = useState(false);
   const [error, setError] = useState('');
@@ -61,18 +61,18 @@ const HrLogin = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0B0C1E] flex items-center justify-center p-6 relative overflow-hidden">
+    <div className="min-h-screen bg-[#0B0C1E] flex items-center justify-center p-4 sm:p-6 relative overflow-hidden">
       {/* Background Glows */}
       <div className="absolute top-[-20%] left-[-10%] w-[60vw] h-[60vw] bg-[#22d3ee]/10 blur-[120px] rounded-full pointer-events-none" />
       <div className="absolute bottom-[-20%] right-[-10%] w-[60vw] h-[60vw] bg-[#d946ef]/10 blur-[120px] rounded-full pointer-events-none" />
 
-      <Card className="w-full max-w-md relative z-10 p-8">
+      <Card className="w-full max-w-lg relative z-10 p-7 sm:p-9 border border-white/10 shadow-2xl shadow-black/30">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 mb-4">
-            <img src="/logo.png" alt="careerGenie logo" className="h-6 object-contain" />
+          <div className="inline-flex items-center justify-center gap-3 mb-5">
+            <img src="/logo.png" alt="careerGenie logo" className="w-40 sm:w-48 object-contain" />
             <span className="text-xs font-bold text-gray-400 border border-white/10 rounded-full px-2 py-0.5 uppercase tracking-widest">HR</span>
           </div>
-          <h2 className="text-2xl font-bold text-white">
+          <h2 className="text-3xl font-bold text-white">
             {isLogin ? 'Recruiter Login' : invite ? 'Accept Workspace Invitation' : 'Create HR Account'}
           </h2>
           <p className="text-gray-400 text-sm mt-2">
@@ -122,17 +122,18 @@ const HrLogin = () => {
                   <select
                     required
                     disabled={Boolean(invite?.position)}
-                    className="w-full bg-[#0B0C1E] border border-white/10 rounded-xl px-4 py-3.5 text-white focus:border-[#22d3ee] outline-none transition-all cursor-pointer"
+                    className="w-full appearance-none bg-[#0B0C1E] border border-white/10 rounded-xl px-4 py-3.5 pr-11 text-gray-200 focus:border-[#22d3ee] focus:ring-2 focus:ring-[#22d3ee]/10 outline-none transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-70"
                     value={formData.position}
                     onChange={e => setFormData({ ...formData, position: e.target.value })}
                   >
-                    <option value="" disabled>Select your position</option>
-                    <option value="HR Manager">HR Manager</option>
-                    <option value="Recruiter">Recruiter</option>
-                    <option value="Technical Recruiter">Technical Recruiter</option>
-                    <option value="Team Lead">Team Lead</option>
-                    <option value="Hiring Manager">Hiring Manager</option>
+                    <option className="bg-[#0B0C1E] text-gray-400" value="" disabled>Select your position</option>
+                    <option className="bg-[#0B0C1E] text-gray-100" value="HR Manager">HR Manager</option>
+                    <option className="bg-[#0B0C1E] text-gray-100" value="Recruiter">Recruiter</option>
+                    <option className="bg-[#0B0C1E] text-gray-100" value="Technical Recruiter">Technical Recruiter</option>
+                    <option className="bg-[#0B0C1E] text-gray-100" value="Team Lead">Team Lead</option>
+                    <option className="bg-[#0B0C1E] text-gray-100" value="Hiring Manager">Hiring Manager</option>
                   </select>
+                  <ChevronDown className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
                 </div>
               </div>
             </>
@@ -205,15 +206,6 @@ const HrLogin = () => {
               </button>
             )}
           </p>
-          
-          <div className="mt-6 flex flex-col gap-2">
-            <button 
-              onClick={() => navigate('/')}
-              className="text-xs text-gray-500 hover:text-gray-300 transition-colors uppercase tracking-widest font-bold"
-            >
-              Back to Candidate Portal
-            </button>
-          </div>
         </div>
       </Card>
     </div>

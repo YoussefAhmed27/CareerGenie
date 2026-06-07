@@ -67,25 +67,25 @@ const Navbar = () => {
 
   return (
     <nav className="fixed top-0 left-0 w-full z-50">
-      <div className="relative z-50 border-b border-white/10 rounded-b-3xl bg-[#11152D]/90 backdrop-blur-md shadow-lg">
-        <div className="container mx-auto flex items-center justify-between h-20 px-6">
+      <div className="relative z-50 border-b border-white/10 bg-[#11152D]/90 backdrop-blur-md shadow-[0_10px_35px_rgba(0,0,0,0.28)]">
+        <div className="w-full flex items-center justify-between h-20 px-4 sm:px-6 lg:px-10 xl:px-12">
           
           <div className="flex-1 flex justify-start items-center cursor-pointer" onClick={() => navigate("/")}>
-            <img src="/logo.png" alt="careerGenie logo" className="w-40 sm:w-48" />
+            <img src="/logo.png" alt="careerGenie logo" className="w-36 sm:w-40" />
           </div>
 
           <div className="hidden lg:flex shrink-0 justify-center">
-            <ul className="flex items-center gap-12 text-[18px] text-gray-300">
+            <ul className="flex items-center gap-10 xl:gap-12 text-[17px] text-gray-300">
               {NavbarMenu.map((item) => (
                 <li key={item.id}>
                   <a 
                     href={item.link} 
                     onClick={(e) => handleNavClick(e, item.link, item.title)}
                     
-                    className={`inline-block transition-colors cursor-pointer ${
+                    className={`inline-block border-b-2 py-7 transition-all cursor-pointer ${
                       activeItem === item.title 
-                        ? 'text-white font-bold' 
-                        : 'text-gray-300 hover:text-white'
+                        ? 'text-white font-bold border-[#2EE8F1]'
+                        : 'text-gray-300 border-transparent hover:text-white hover:border-white/40'
                     }`}
                   >
                     {item.title}
@@ -97,10 +97,10 @@ const Navbar = () => {
                 <a
                   href="/hr"
                   onClick={(e) => handleNavClick(e, '/hr', 'HR Portal')}
-                  className={`inline-block transition-colors cursor-pointer ${
+                  className={`inline-block border-b-2 py-7 transition-all cursor-pointer ${
                     activeItem === 'HR Portal'
-                      ? 'text-white font-bold'
-                      : 'text-gray-300 hover:text-white'
+                      ? 'text-white font-bold border-[#2EE8F1]'
+                      : 'text-gray-300 border-transparent hover:text-white hover:border-white/40'
                   }`}
                 >
                   HR Portal
@@ -202,10 +202,10 @@ const Navbar = () => {
               <a 
                 href={item.link} 
                 onClick={(e) => handleNavClick(e, item.link, item.title)}
-                className={`block transition-colors cursor-pointer ${
+                className={`block border-l-2 pl-3 transition-all cursor-pointer ${
                   activeItem === item.title 
-                    ? 'text-white font-bold' 
-                    : 'text-gray-300 hover:text-white'
+                    ? 'text-white font-bold border-[#2EE8F1]'
+                    : 'text-gray-300 border-transparent hover:text-white hover:border-white/40'
                 }`}
               >
                 {item.title}
@@ -217,10 +217,10 @@ const Navbar = () => {
             <a
               href="/hr"
               onClick={(e) => handleNavClick(e, '/hr', 'HR Portal')}
-              className={`block transition-colors cursor-pointer ${
+              className={`block border-l-2 pl-3 transition-all cursor-pointer ${
                 activeItem === 'HR Portal'
-                  ? 'text-white font-bold'
-                  : 'text-gray-300 hover:text-white'
+                  ? 'text-white font-bold border-[#2EE8F1]'
+                  : 'text-gray-300 border-transparent hover:text-white hover:border-white/40'
               }`}
             >
               HR Portal

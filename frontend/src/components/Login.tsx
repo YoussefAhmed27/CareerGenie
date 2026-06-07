@@ -13,7 +13,7 @@ const Login: React.FC = () => {
     const NODE_BASE_URL = import.meta.env.VITE_NODE_URL || 'http://localhost:5000';
 
     const [isLoginMode, setIsLoginMode] = useState<boolean>(true);
-    const [role, setRole] = useState<string>("candidate");
+    const role: string = "candidate";
     const [error, setError] = useState<string>("");
     const navigate = useNavigate();
     const googleInitialized = useRef(false);
@@ -296,33 +296,6 @@ const Login: React.FC = () => {
                                 required
                             />
 
-                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 mt-1 justify-center shrink-0">
-                                <p className="text-sm text-white/70 font-semibold">Joined as:</p>
-                                <div className="flex gap-4">
-                                    <label className="flex items-center gap-2 cursor-pointer group">
-                                        <input
-                                            type="radio"
-                                            name="role"
-                                            value="candidate"
-                                            checked={role === "candidate"}
-                                            onChange={(e) => setRole(e.target.value)}
-                                            className="accent-[#5975E2] w-4 h-4 cursor-pointer"
-                                        />
-                                        <span className="text-sm text-white/60 group-hover:text-white transition-colors">Candidate</span>
-                                    </label>
-                                    <label className="flex items-center gap-2 cursor-pointer group">
-                                        <input
-                                            type="radio"
-                                            name="role"
-                                            value="hr"
-                                            checked={role === "hr"}
-                                            onChange={(e) => setRole(e.target.value)}
-                                            className="accent-[#5975E2] w-4 h-4 cursor-pointer"
-                                        />
-                                        <span className="text-sm text-white/60 group-hover:text-white transition-colors">HR</span>
-                                    </label>
-                                </div>
-                            </div>
                         </>
                     )}
 

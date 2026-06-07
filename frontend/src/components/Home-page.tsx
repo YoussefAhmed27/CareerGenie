@@ -167,8 +167,8 @@ const Home = () => {
               <div className="w-full pl-20 md:pl-0 md:w-[45%]">
                 <div className="rounded-2xl bg-linear-to-r from-[#2EE8F1] to-[#E240CA] p-px">
                   <div className="bg-[#11152D] rounded-[15px] p-5">
-                    <h4 className="text-xl font-bold text-white mb-2">Step 2: Create Meeting</h4>
-                    <p className="text-gray-400">Schedule your interview session at a time that works best for you.</p>
+                    <h4 className="text-xl font-bold text-white mb-2">Step 2: Set Up Session</h4>
+                    <p className="text-gray-400">Add your CV and role details, then choose your interview mode and avatar.</p>
                   </div>
                 </div>
               </div>
@@ -182,8 +182,8 @@ const Home = () => {
               <div className="w-full pl-20 md:pl-0 md:w-[45%] md:pr-12">
                 <div className="rounded-2xl bg-linear-to-r from-[#2EE8F1] to-[#E240CA] p-px">
                   <div className="bg-[#11152D] rounded-[15px] p-5">
-                    <h4 className="text-xl font-bold text-white mb-2">Step 3: Attend Meeting</h4>
-                    <p className="text-gray-400">Join and get ready for the simulated interview with your recruiter.</p>
+                    <h4 className="text-xl font-bold text-white mb-2">Step 3: Conduct AI Interview</h4>
+                    <p className="text-gray-400">Engage with an AI avatar interviewer in a dynamic, realistic conversation.</p>
                   </div>
                 </div>
               </div>
@@ -197,8 +197,8 @@ const Home = () => {
               <div className="w-full pl-20 md:w-[45%] md:pl-12">
                 <div className="rounded-2xl bg-linear-to-r from-[#2EE8F1] to-[#E240CA] p-px">
                   <div className="bg-[#11152D] rounded-[15px] p-5">
-                    <h4 className="text-xl font-bold text-white mb-2">Step 4: Review Results</h4>
-                    <p className="text-gray-400">Get insights into your interview performance.</p>
+                    <h4 className="text-xl font-bold text-white mb-2">Step 4: Receive Feedback</h4>
+                    <p className="text-gray-400">Get clear insights into your technical and behavioral interview performance.</p>
                   </div>
                 </div>
               </div>
@@ -212,8 +212,8 @@ const Home = () => {
               <div className="w-full pl-20 md:pl-0 md:w-[45%] md:pr-12">
                 <div className="rounded-2xl bg-linear-to-r from-[#2EE8F1] to-[#E240CA] p-px">
                   <div className="bg-[#11152D] rounded-[15px] p-5">
-                    <h4 className="text-xl font-bold text-white mb-2">Step 5: Receive Feedback</h4>
-                    <p className="text-gray-400">Receive crucial feedback to improve for future opportunities.</p>
+                    <h4 className="text-xl font-bold text-white mb-2">Step 5: Start Coaching</h4>
+                    <p className="text-gray-400">Work with a personal coach for improvement tips and targeted practice questions.</p>
                   </div>
                 </div>
               </div>
@@ -228,7 +228,7 @@ const Home = () => {
               Why Choose CareerGenie
             </h2>
             <p className="text-lg text-gray-400 mb-2">Empowering candidates with smart preparation and real feedback</p>
-            <p className="text-base text-gray-500">We combine AI-driven insights with realistic simulations to help you unlock your potential before the real interview</p>
+            <p className="text-base text-gray-500 max-w-2xl mx-auto">We combine AI-driven insights with realistic simulations to help you build confidence before the real interview</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto w-full mb-12">
@@ -274,8 +274,8 @@ const Home = () => {
                   <HiOutlineDocumentSearch size={28} />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-white mb-2">Tailored CV & Role Matching</h3>
-                  <p className="text-gray-400 leading-relaxed text-sm">Let the system analyze your CV and prepare relevant interview questions</p>
+                  <h3 className="text-xl font-bold text-white mb-2">CV Analysis & Creation</h3>
+                  <p className="text-gray-400 leading-relaxed text-sm">Analyze your CV, tailor it to a role, or create a polished version from scratch.</p>
                 </div>
               </div>
             </div>
@@ -304,7 +304,7 @@ const Home = () => {
               Automate screening and find top talent faster.
             </p>
             <button 
-              onClick={() => navigate('/hr')}
+              onClick={() => navigate('/hr#top', { state: { scrollToTop: true } })}
               className="px-8 py-3 rounded-full border border-[#22d3ee] text-[#22d3ee] font-bold hover:bg-[#22d3ee]/10 transition-all flex items-center gap-2 mx-auto group"
             >
               Go to HR Portal

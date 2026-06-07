@@ -26,7 +26,7 @@ export const Sidebar = ({ activeView, setView, isMobileOpen, setIsMobileOpen, wo
         ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
 
         <div className="h-16 flex items-center px-6 border-b border-white/5 justify-between">
-          <img src="/logo.png" alt="CareerGenie HR Logo" className="h-6 object-contain cursor-pointer" onClick={() => setView('dashboard')} />
+          <img src="/logo.png" alt="CareerGenie HR Logo" className="h-9 object-contain cursor-pointer" onClick={() => setView('dashboard')} />
           <button className="md:hidden text-gray-400" onClick={() => setIsMobileOpen(false)}>
             <X size={20} />
           </button>

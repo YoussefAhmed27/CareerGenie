@@ -101,10 +101,9 @@ const App = () => {
           path="/login"
           element={
             <PublicRoute>
-              <div className="relative w-full min-h-screen">
-                <div className="absolute inset-0 bg-[url('/Login.png')] bg-cover bg-center">
-                  <div className="absolute inset-0 bg-black/40 backdrop-blur-xs"></div>
-                </div>
+              <div className="relative w-full min-h-screen bg-[#0B0C1E] overflow-hidden">
+                <div className="absolute top-[-20%] left-[-10%] w-[60vw] h-[60vw] bg-[#22d3ee]/10 blur-[120px] rounded-full pointer-events-none" />
+                <div className="absolute bottom-[-20%] right-[-10%] w-[60vw] h-[60vw] bg-[#d946ef]/10 blur-[120px] rounded-full pointer-events-none" />
                 <div className="relative z-10 grid w-full min-h-screen place-items-center p-4">
                   <Login />
                 </div>
