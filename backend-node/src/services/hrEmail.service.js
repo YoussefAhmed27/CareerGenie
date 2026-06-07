@@ -41,6 +41,38 @@ function escapeHtml(value) {
     .replace(/"/g, "&quot;");
 }
 
+async function sendWithResend({ to, subject, text, html }) {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    throw new Error("RESEND_API_KEY is required when EMAIL_MODE=resend.");
+  }
+
+  const resendPayload = {
+    from: EMAIL_FROM,
+    to,
+    subject,
+    html,
+    ...(text ? { text } : {}),
+    ...(EMAIL_REPLY_TO ? { reply_to: EMAIL_REPLY_TO } : {}),
+  };
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(resendPayload),
+  });
+
+  if (!response.ok) {
+    const body = await response.text().catch(() => "");
+    throw new Error(`Resend email failed with status ${response.status}: ${body}`);
+  }
+
+  return response.json().catch(() => ({ mode: "resend" }));
+}
+
 function formatDate(value) {
   if (!value) return "";
   const date = new Date(value);
@@ -74,6 +106,15 @@ async function sendEmail({ to, subject, text, html }) {
 
   if (EMAIL_MODE === "smtp") {
     return getTransporter().sendMail(payload);
+  }
+
+  if (EMAIL_MODE === "resend") {
+    return sendWithResend({
+      to: payload.to,
+      subject: payload.subject,
+      text: payload.text,
+      html: payload.html,
+    });
   }
 
   console.warn(`[HR Email] Unsupported EMAIL_MODE="${EMAIL_MODE}". Email skipped.`);
