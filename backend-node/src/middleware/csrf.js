@@ -33,6 +33,13 @@ function csrfProtect(req, res, next) {
         return next();
     }
 
+    if (
+        method === "POST" &&
+        /^\/api\/hr\/public\/ai-interviews\/[^/]+\/(?:start|result)$/.test(req.path)
+    ) {
+        return next();
+    }
+
     const cookieToken = getCookie(req, "csrf_token");
     const headerToken = req.get("x-csrf-token");
 

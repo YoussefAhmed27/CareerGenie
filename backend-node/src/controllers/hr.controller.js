@@ -1112,13 +1112,19 @@ exports.markPublicAIInterviewStarted = async (req, res, next) => {
   try {
     const invitation = await getInvitationByToken(token);
     if (!invitation) return res.status(404).json({ error: "Invitation not found." });
+    if (invitation.start_time && new Date(invitation.start_time) > new Date()) {
+      return res.status(403).json({ error: "Interview window has not started." });
+    }
     if (invitation.expires_at && new Date(invitation.expires_at) < new Date()) {
       return res.status(410).json({ error: "Invitation has expired." });
+    }
+    if (invitation.status === "completed") {
+      return res.status(409).json({ error: "Interview already completed." });
     }
 
     await pool.query(
       `UPDATE hr_ai_interview_invitation
-       SET status = CASE WHEN status = 'completed' THEN status ELSE 'started' END,
+       SET status = 'started',
            ai_session_id = COALESCE($1, ai_session_id),
            started_at = COALESCE(started_at, NOW())
        WHERE invitation_id = $2`,
@@ -1138,6 +1144,15 @@ exports.savePublicAIInterviewResult = async (req, res, next) => {
   try {
     const invitation = await getInvitationByToken(token);
     if (!invitation) return res.status(404).json({ error: "Invitation not found." });
+    if (invitation.start_time && new Date(invitation.start_time) > new Date()) {
+      return res.status(403).json({ error: "Interview window has not started." });
+    }
+    if (invitation.expires_at && new Date(invitation.expires_at) < new Date()) {
+      return res.status(410).json({ error: "Invitation has expired." });
+    }
+    if (invitation.status === "completed") {
+      return res.status(409).json({ error: "Interview already completed." });
+    }
 
     const saved = await pool.query(
       `INSERT INTO hr_ai_interview_result (
@@ -1145,14 +1160,7 @@ exports.savePublicAIInterviewResult = async (req, res, next) => {
          ai_session_id, interview_mode, overall_score, video_object_key, feedback_data
        )
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb)
-       ON CONFLICT (invitation_id)
-       DO UPDATE SET
-         ai_session_id = EXCLUDED.ai_session_id,
-         interview_mode = EXCLUDED.interview_mode,
-         overall_score = EXCLUDED.overall_score,
-         video_object_key = EXCLUDED.video_object_key,
-         feedback_data = EXCLUDED.feedback_data,
-         updated_at = NOW()
+       ON CONFLICT (invitation_id) DO NOTHING
        RETURNING *`,
       [
         invitation.invitation_id,
@@ -1166,6 +1174,9 @@ exports.savePublicAIInterviewResult = async (req, res, next) => {
         JSON.stringify(feedback_data || {}),
       ]
     );
+    if (saved.rows.length === 0) {
+      return res.status(409).json({ error: "Interview result already exists." });
+    }
 
     await pool.query(
       `UPDATE hr_ai_interview_invitation
