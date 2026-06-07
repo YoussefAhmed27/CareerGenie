@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import '../interview-styles.css';
-import { saveInterviewResult } from '../api/interviewService';
+import { saveHrInterviewResult, saveInterviewResult } from '../api/interviewService';
 
 const CYAN = '#00f2fe';
 const MAGENTA = '#d422eb';
+const AI_BASE_URL = import.meta.env.VITE_AI_URL || import.meta.env.VITE_AI_SERVICE_URL || 'http://127.0.0.1:8000';
 
 function scoreColor(score) {
   if (score >= 8.5) return '#00f2fe';
@@ -385,11 +386,12 @@ const InsightList = ({ items, type }) => {
   );
 };
 
-
-export default function FeedbackDisplay({ data, sessionId, videoUrl, isHistoryView = false }) {
+export default function FeedbackDisplay({ data, sessionId, videoUrl, isHistoryView = false, onExit, exitLabel }) {
   const [videoDuration, setVideoDuration] = useState(0);
   const scrollContainerRef = useRef(null);
   const hasSaved = useRef(false);
+  const [hrSubmitStatus, setHrSubmitStatus] = useState('saving');
+  const [hrSubmitError, setHrSubmitError] = useState('');
   
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
@@ -400,38 +402,68 @@ export default function FeedbackDisplay({ data, sessionId, videoUrl, isHistoryVi
   useEffect(() => {
     if (!isHistoryView && data && sessionId && !hasSaved.current && !data.error) {
       hasSaved.current = true;
+
+      const hrInvitationToken = sessionStorage.getItem('hr_invitation_token');
+
       const payload = {
+        ai_session_id: sessionId,
         job_role: data.job_role || "Candidate",
         interview_mode: data.mode || "comprehensive",
         overall_score: data.overall_score || 0,
         video_object_key: `${sessionId}.webm`,
         feedback_data: data
       };
-      
-      saveInterviewResult(payload).catch(err => {
-        console.error("Failed to automatically save interview result:", err);
-      });
+
+      if (hrInvitationToken) {
+        setHrSubmitStatus('saving');
+        setHrSubmitError('');
+
+        saveHrInterviewResult(hrInvitationToken, payload)
+          .then(() => setHrSubmitStatus('saved'))
+          .catch(err => {
+            console.error("Failed to automatically save HR interview result:", err);
+            setHrSubmitStatus('error');
+            setHrSubmitError(err.message || 'Could not submit the interview result.');
+          });
+      } else {
+        saveInterviewResult(payload).catch(err => {
+          console.error("Failed to automatically save interview result:", err);
+        });
+      }
     }
   }, [data, sessionId, isHistoryView]);
 
-  const handleExitClick = () => { 
-    if (isHistoryView) {
+  const handleExitClick = () => {
+    if (onExit) {
+      onExit();
+    } else if (isHistoryView) {
       window.location.href = '/history';
+    } else if (sessionStorage.getItem('hr_invitation_token')) {
+      sessionStorage.removeItem('hr_invitation_token');
+      sessionStorage.removeItem('hr_invitation_candidate');
+      sessionStorage.removeItem('hr_invitation_job');
+      window.close();
     } else {
-      window.location.href = '/'; 
+      window.location.href = '/';
     }
   };
 
   const handleRestartClick = async () => {
+    if (sessionStorage.getItem('hr_invitation_token')) {
+      alert("Restart is disabled for HR-assigned interviews. Please use the original invitation link again if needed.");
+      return;
+    }
+
     if (isHistoryView) {
       window.location.href = '/history';
       return;
     }
+
     try {
-      const response = await fetch(`http://127.0.0.1:8000/restart_session/${sessionId}`, { method: 'POST' });
+      const response = await fetch(`${AI_BASE_URL}/restart_session/${sessionId}`, { method: 'POST' });
       if (!response.ok) throw new Error("Failed to restart");
       const result = await response.json();
-      window.location.href = `/interview/session?sessionId=${result.session_id}`; 
+      window.location.href = `/interview/session?sessionId=${result.session_id}`;
     } catch (err) {
       alert("Could not restart the session. The server might have reset.");
     }
@@ -461,6 +493,89 @@ export default function FeedbackDisplay({ data, sessionId, videoUrl, isHistoryVi
       scrollContainerRef.current.scrollLeft += e.deltaY;
     }
   };
+
+  const isHrAssignedInterview = !isHistoryView && !!sessionStorage.getItem('hr_invitation_token');
+
+  if (isHrAssignedInterview) {
+    const candidateName = sessionStorage.getItem('hr_invitation_candidate') || 'Candidate';
+    const jobTitle = sessionStorage.getItem('hr_invitation_job') || 'this role';
+    const saved = hrSubmitStatus === 'saved';
+    const failed = hrSubmitStatus === 'error' || error;
+
+    return (
+      <div className="ai-theme-wrapper" style={{
+        minHeight: '100vh',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        background: 'radial-gradient(circle at top, rgba(0,242,254,0.12), #0b0e14 45%)',
+        color: '#fff',
+        padding: '24px',
+        boxSizing: 'border-box'
+      }}>
+        <ParticleCanvas />
+        <div style={{
+          width: '100%',
+          maxWidth: '720px',
+          background: 'rgba(17, 20, 29, 0.92)',
+          border: `1px solid ${failed ? 'rgba(255,8,68,0.35)' : 'rgba(0,242,254,0.28)'}`,
+          boxShadow: failed ? '0 24px 80px rgba(255,8,68,0.12)' : '0 24px 80px rgba(0,242,254,0.12)',
+          padding: '56px',
+          borderRadius: '24px',
+          textAlign: 'center',
+          zIndex: 1
+        }}>
+          <div style={{
+            width: '72px',
+            height: '72px',
+            borderRadius: '50%',
+            margin: '0 auto 28px',
+            display: 'grid',
+            placeItems: 'center',
+            background: failed ? 'rgba(255,8,68,0.12)' : 'rgba(0,242,254,0.12)',
+            border: failed ? '1px solid rgba(255,8,68,0.4)' : '1px solid rgba(0,242,254,0.4)',
+            color: failed ? '#ff0844' : CYAN,
+            fontSize: '34px',
+            fontWeight: 900
+          }}>
+            {saved ? '✓' : failed ? '!' : '...'}
+          </div>
+
+          <p style={{ color: '#7586a1', fontSize: '13px', letterSpacing: '2px', fontWeight: 900, textTransform: 'uppercase', marginBottom: '14px' }}>
+            {saved ? 'Interview Submitted' : failed ? 'Submission Needs Review' : 'Submitting Interview'}
+          </p>
+
+          <h1 style={{ fontSize: '2.7rem', lineHeight: 1.1, margin: '0 0 18px', fontWeight: 900 }}>
+            {saved ? 'Thank you for interviewing with us.' : failed ? 'Thank you. Your interview was completed.' : 'Please wait while we submit your interview.'}
+          </h1>
+
+          <p style={{ color: '#a0aab2', fontSize: '17px', lineHeight: 1.7, margin: '0 auto', maxWidth: '560px' }}>
+            {saved
+              ? `Your interview for ${jobTitle} has been securely submitted. The hiring team will review your interview and contact you about next steps.`
+              : failed
+                ? `Your interview for ${jobTitle} has ended. Please do not retake it unless the hiring team sends you a new invitation.`
+                : `We are preparing your interview report for the hiring team. This page will update automatically.`}
+          </p>
+
+          {hrSubmitError && (
+            <p style={{ marginTop: '22px', color: '#ff8a9b', fontSize: '14px' }}>
+              {hrSubmitError}
+            </p>
+          )}
+
+          <p style={{ marginTop: '34px', color: '#7586a1', fontSize: '14px' }}>
+            {candidateName}, you may close this tab once submission is complete.
+          </p>
+
+          {(saved || failed) && (
+            <button onClick={handleExitClick} className="btn-exit" style={{ marginTop: '24px', minWidth: '190px' }}>
+              Close
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   if (error) {
     return (
@@ -514,31 +629,16 @@ export default function FeedbackDisplay({ data, sessionId, videoUrl, isHistoryVi
         <div style={{ flex: '0 0 500px', background: 'rgba(17, 20, 29, 0.85)', padding: '50px', borderRadius: '30px', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column', gap: '30px', zIndex: 1, boxShadow: '0 20px 50px rgba(0,0,0,0.5)', backdropFilter: 'blur(20px)' }}>
           <div>
             <h1 style={{ fontSize: '3.6rem', whiteSpace: 'nowrap', fontWeight: '900', margin: '0 0 10px 0', background: 'linear-gradient(90deg, #fff, #a0aab2)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-              Interview Feedback
+              Interview Report
             </h1>
-            <p style={{ color: '#7586a1', fontSize: '15px', margin: 0, fontWeight: '600' }}>Comprehensive multimodal system analysis.</p>
+            <p style={{ color: '#7586a1', fontSize: '14px', letterSpacing: '3px', fontWeight: '800' }}>
+              {header.role || 'FULL STACK DEVELOPER'} • {new Date().toLocaleDateString()}
+            </p>
           </div>
 
-          <div style={{ background: '#0b0e14', borderRadius: '16px', padding: '24px', border: '1px solid rgba(255,255,255,0.02)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: '#7586a1', fontSize: '13px', fontWeight: '800', letterSpacing: '1px' }}>CANDIDATE</span>
-              <span style={{ color: '#fff', fontSize: '14px', fontWeight: '700' }}>{header.candidate_name || "Guest"}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: '#7586a1', fontSize: '13px', fontWeight: '800', letterSpacing: '1px' }}>DATE</span>
-              <span style={{ color: '#fff', fontSize: '14px', fontWeight: '700' }}>{header.interview_date || new Date().toLocaleDateString()}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: '#7586a1', fontSize: '13px', fontWeight: '800', letterSpacing: '1px' }}>DURATION</span>
-              <span style={{ color: CYAN, fontSize: '14px', fontWeight: '800', fontFamily: 'monospace' }}>
-                {videoDuration > 0 ? `${(videoDuration / 60).toFixed(1)} MIN` : 'Loading...'}
-              </span>
-            </div>
-          </div>
-
-          <div style={{ borderRadius: '16px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', background: '#000', boxShadow: 'inset 0 0 20px rgba(0,0,0,0.5)' }}>
+          <div style={{ borderRadius: '20px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', background: '#000', boxShadow: '0 0 30px rgba(0,0,0,0.5)' }}>
             <video 
-              src={videoUrl || data.video_url || `http://127.0.0.1:8000/recordings/${sessionId}.webm`} 
+              src={videoUrl || data.video_url || `${AI_BASE_URL}/recordings/${sessionId}.webm`} 
               controls 
               style={{ width: '100%', display: 'block' }} 
               onLoadedMetadata={(e) => setVideoDuration(e.target.duration)}
@@ -547,7 +647,7 @@ export default function FeedbackDisplay({ data, sessionId, videoUrl, isHistoryVi
 
           <div style={{ display: 'flex', gap: '16px', marginTop: '10px' }}>
             <button onClick={handleExitClick} className="btn-exit" style={{ flex: 1 }}>
-              {isHistoryView ? 'BACK TO DASHBOARD' : 'EXIT'}
+              {exitLabel || (isHistoryView ? 'BACK TO DASHBOARD' : 'EXIT')}
             </button>
             {!isHistoryView && (
               <button onClick={handleRestartClick} className="btn-retry" style={{ flex: 1.5 }}>
@@ -565,42 +665,37 @@ export default function FeedbackDisplay({ data, sessionId, videoUrl, isHistoryVi
               onClick={handleStartCoaching} 
               style={{
                 marginTop: '40px',
-                padding: '16px 40px',
-                background: `linear-gradient(90deg, ${MAGENTA}, ${CYAN})`,
-                color: '#fff',
-                border: 'none',
-                borderRadius: '12px',
+                padding: '20px 50px',
+                background: 'rgba(0,242,254,0.08)',
+                border: `1px solid ${CYAN}`,
+                color: CYAN,
+                borderRadius: '50px',
                 fontSize: '16px',
-                fontWeight: '900',
+                fontWeight: '800',
                 letterSpacing: '2px',
                 cursor: 'pointer',
-                boxShadow: `0 4px 20px ${MAGENTA}60`,
-                transition: 'all 0.3s',
-                textTransform: 'uppercase'
+                boxShadow: `0 0 20px ${CYAN}20`,
+                transition: 'all 0.3s'
               }}
-              onMouseOver={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = `0 8px 30px ${MAGENTA}80`; }}
-              onMouseOut={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = `0 4px 20px ${MAGENTA}60`; }}
             >
-              Start Coaching Session
+              START AI COACHING
             </button>
           )}
-
-          <div className="scroll-indicator" style={{ marginTop: '30px', color: CYAN, fontSize: '14px', letterSpacing: '2px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'grab' }}>
-            SCROLL RIGHT FOR DEEP DIVE <span style={{ fontSize: '24px' }}>→</span>
-          </div>
+        </div>
+        
+        <div className="scroll-indicator" style={{ position: 'absolute', bottom: '40px', right: '60px', color: '#7586a1', display: 'flex', alignItems: 'center', gap: '12px', fontSize: '12px', fontWeight: '800', letterSpacing: '2px', zIndex: 2 }}>
+          SCROLL HORIZONTALLY <span style={{ fontSize: '24px', color: CYAN, animation: 'bounceRight 1.5s infinite' }}>→</span>
         </div>
       </section>
 
-      {/* Technical Evaluation Page */}
+      {/* Technical Analysis Page*/}
       {technical_report && (
         <section className="snap-screen screen-block">
-
           <div className="screen-header" style={{ zIndex: 1, position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div style={{ flex: 1, paddingRight: '60px' }}>
-              <h1 className="screen-title">Technical Evaluation</h1>
+              <h1 className="screen-title">Technical Deep Dive</h1>
               <p className="screen-summary" style={{ maxWidth: '100%' }}>{tTop.overall_summary}</p>
             </div>
-            
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '20px' }}>
               <button onClick={handleExitClick} className="btn-exit-small">EXIT DASHBOARD</button>
               <MassiveDonut score={tTop.technical_score || 0} label="Tech Score" size={160} />
@@ -622,7 +717,6 @@ export default function FeedbackDisplay({ data, sessionId, videoUrl, isHistoryVi
               <MetricBarAnimated label="Problem Solving Logic" score={tMetrics.problem_solving_logic || 0} />
             </div>
           </div>
-
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '40px', paddingBottom: '80px', zIndex: 1, position: 'relative' }}>
             <div>

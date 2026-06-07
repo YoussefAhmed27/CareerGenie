@@ -1,5 +1,6 @@
 import Navbar from "./Navbar/Navbar";
 import { useNavigate } from "react-router-dom"; 
+import { ArrowRight } from "lucide-react";
 
 // Features Icons
 import { VscFeedback } from "react-icons/vsc";
@@ -288,6 +289,26 @@ const Home = () => {
               className="group px-10 py-4 rounded-2xl bg-linear-to-r from-[#2EE8F1] via-[#5975E2] to-[#E240CA] hover:brightness-110 active:scale-[0.98] transition-all font-bold text-white text-lg shadow-[0_0_20px_rgba(46,232,241,0.3)] w-full max-w-sm"
             >
               Start Your Free Simulation
+            </button>
+          </div>
+        </section>
+
+
+        {/* HR Portal CTA */}
+        <section className="py-20 border-t border-white/5 bg-[#0B0C1E]/30 relative overflow-hidden">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60%] h-[60%] bg-[#22d3ee]/5 blur-[120px] rounded-full pointer-events-none" />
+          <div className="container mx-auto px-6 text-center relative z-10">
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Are you a Recruiter or HR Professional?</h2>
+            <p className="text-gray-400 max-w-2xl mx-auto mb-10">
+              Transform your hiring process with our autonomous AI interviewers.
+              Automate screening and find top talent faster.
+            </p>
+            <button 
+              onClick={() => navigate('/hr')}
+              className="px-8 py-3 rounded-full border border-[#22d3ee] text-[#22d3ee] font-bold hover:bg-[#22d3ee]/10 transition-all flex items-center gap-2 mx-auto group"
+            >
+              Go to HR Portal
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </button>
           </div>
         </section>

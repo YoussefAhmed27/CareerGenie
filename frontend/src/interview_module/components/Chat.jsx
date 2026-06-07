@@ -73,11 +73,11 @@ export default function Chat() {
     }
 
     if (mode === 'coaching') {
-        if (audioCtx && audioCtx.state === 'running') {
-            audioCtx.suspend();
-        }
-        navigate('/');
-        return;
+      if (audioCtx && audioCtx.state === 'running') {
+        audioCtx.suspend();
+      }
+      navigate('/');
+      return;
     }
 
     setIsFeedbackLoading(true);
@@ -92,15 +92,18 @@ export default function Chat() {
             localStorage.getItem(`qa_intervals_${sessionId}`) || "[]"
           );
 
-          const AI_BASE_URL = import.meta.env.VITE_AI_URL || 'https://ai.careersgenie.tech';
+          const AI_BASE_URL =
+            import.meta.env.VITE_AI_URL ||
+            import.meta.env.VITE_AI_SERVICE_URL ||
+            'https://ai.careersgenie.tech';
           
           const response = await fetch(`${AI_BASE_URL}/get_feedback`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                  session_id: sessionId,
-                  qa_intervals: storedQaIntervals
-              })
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              session_id: sessionId,
+              qa_intervals: storedQaIntervals
+            })
           });
           
           if (!response.ok) throw new Error(`Backend Error: ${response.status}`);
@@ -222,17 +225,17 @@ export default function Chat() {
   if (feedbackError) {
     return (
       <div className="ai-theme-wrapper flex items-center justify-center h-screen text-white">
-         <div className="text-center bg-[#0B0F19] p-10 rounded-3xl border border-red-500/30 shadow-[0_0_30px_rgba(239,68,68,0.2)]">
-            <div className="w-16 h-16 mx-auto mb-6 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center">
-              <svg width="32" height="32" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-            </div>
-            <h2 className="text-2xl font-bold mb-4 text-red-400">Analysis Failed</h2>
-            <p className="text-gray-400 mb-8 max-w-md mx-auto">The interview session data could not be processed. The server may have timed out while generating your comprehensive feedback report.</p>
-            <p className="text-xs text-red-400/50 mb-8 font-mono">{feedbackError}</p>
-            <button onClick={() => navigate('/')} className="px-8 py-3 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors font-semibold">
-              Return Home
-            </button>
-         </div>
+        <div className="text-center bg-[#0B0F19] p-10 rounded-3xl border border-red-500/30 shadow-[0_0_30px_rgba(239,68,68,0.2)]">
+          <div className="w-16 h-16 mx-auto mb-6 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center">
+            <svg width="32" height="32" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+          </div>
+          <h2 className="text-2xl font-bold mb-4 text-red-400">Analysis Failed</h2>
+          <p className="text-gray-400 mb-8 max-w-md mx-auto">The interview session data could not be processed. The server may have timed out while generating your comprehensive feedback report.</p>
+          <p className="text-xs text-red-400/50 mb-8 font-mono">{feedbackError}</p>
+          <button onClick={() => navigate('/')} className="px-8 py-3 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors font-semibold">
+            Return Home
+          </button>
+        </div>
       </div>
     );
   }
@@ -287,9 +290,9 @@ export default function Chat() {
           title="Return to Home"
         />
         {mode === 'coaching' && (
-           <div style={{ marginLeft: '20px', background: 'rgba(0,242,254,0.1)', color: '#00f2fe', padding: '6px 12px', borderRadius: '8px', fontWeight: 'bold', fontSize: '14px', border: '1px solid #00f2fe' }}>
-              LIVE COACHING SESSION
-           </div>
+          <div style={{ marginLeft: '20px', background: 'rgba(0,242,254,0.1)', color: '#00f2fe', padding: '6px 12px', borderRadius: '8px', fontWeight: 'bold', fontSize: '14px', border: '1px solid #00f2fe' }}>
+            LIVE COACHING SESSION
+          </div>
         )}
       </div>
 
@@ -307,15 +310,15 @@ export default function Chat() {
           </div>
 
           {mode !== 'coaching' && (
-              <div className="webcam-wrapper">
-                <WebcamOverlay 
-                  sessionId={sessionId}
-                  isActive={isAvatarReady && !isInterviewComplete}
-                  onTerminate={(reason) => {
-                    handleEndInterview(reason);
-                  }}
-                />
-              </div>
+            <div className="webcam-wrapper">
+              <WebcamOverlay 
+                sessionId={sessionId}
+                isActive={isAvatarReady && !isInterviewComplete}
+                onTerminate={(reason) => {
+                  handleEndInterview(reason);
+                }}
+              />
+            </div>
           )}
 
           <div className="chat-center-control">

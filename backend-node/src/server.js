@@ -13,11 +13,13 @@ const { errorHandler } = require("./middleware/errorHandler");
 const { csrfProtect } = require("./middleware/csrf");
 
 const app = express();
-app.set('trust proxy', 1);
 
-const allowedOrigins = process.env.CLIENT_ORIGIN 
-    ? process.env.CLIENT_ORIGIN.split(',') 
-    : [process.env.CLIENT_ORIGIN];
+app.set("trust proxy", 1);
+
+const allowedOrigins = (process.env.CLIENT_ORIGIN || "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
 
 app.use(helmet({
     crossOriginResourcePolicy: false
@@ -46,9 +48,12 @@ app.use("/uploads", express.static("uploads"));
 app.use(csrfProtect);
 
 app.use("/auth", authRoutes);
+app.use("/auth/hr", require("./routes/hr-auth"));
+
 app.use("/practice", practiceRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/interviews", require("./routes/interview"));
+app.use("/api/hr", require("./routes/hr"));
 
 app.get("/", (req, res) => {
     res.json({ message: "CareerGenie Backend Running" });

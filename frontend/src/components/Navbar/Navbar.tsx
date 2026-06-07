@@ -92,6 +92,20 @@ const Navbar = () => {
                   </a>
                 </li>
               ))}
+
+              <li>
+                <a
+                  href="/hr"
+                  onClick={(e) => handleNavClick(e, '/hr', 'HR Portal')}
+                  className={`inline-block transition-colors cursor-pointer ${
+                    activeItem === 'HR Portal'
+                      ? 'text-white font-bold'
+                      : 'text-gray-300 hover:text-white'
+                  }`}
+                >
+                  HR Portal
+                </a>
+              </li>
             </ul>
           </div>
 
@@ -198,6 +212,20 @@ const Navbar = () => {
               </a>
             </li>
           ))}
+
+          <li>
+            <a
+              href="/hr"
+              onClick={(e) => handleNavClick(e, '/hr', 'HR Portal')}
+              className={`block transition-colors cursor-pointer ${
+                activeItem === 'HR Portal'
+                  ? 'text-white font-bold'
+                  : 'text-gray-300 hover:text-white'
+              }`}
+            >
+              HR Portal
+            </a>
+          </li>
         </ul>
 
         <div className="mt-8 border-t border-white/10 pt-8 flex flex-col gap-4">
