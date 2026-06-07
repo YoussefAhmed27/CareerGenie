@@ -1112,9 +1112,6 @@ exports.markPublicAIInterviewStarted = async (req, res, next) => {
   try {
     const invitation = await getInvitationByToken(token);
     if (!invitation) return res.status(404).json({ error: "Invitation not found." });
-    if (invitation.start_time && new Date(invitation.start_time) > new Date()) {
-      return res.status(403).json({ error: "Interview window has not started." });
-    }
     if (invitation.expires_at && new Date(invitation.expires_at) < new Date()) {
       return res.status(410).json({ error: "Invitation has expired." });
     }
@@ -1144,9 +1141,6 @@ exports.savePublicAIInterviewResult = async (req, res, next) => {
   try {
     const invitation = await getInvitationByToken(token);
     if (!invitation) return res.status(404).json({ error: "Invitation not found." });
-    if (invitation.start_time && new Date(invitation.start_time) > new Date()) {
-      return res.status(403).json({ error: "Interview window has not started." });
-    }
     if (invitation.expires_at && new Date(invitation.expires_at) < new Date()) {
       return res.status(410).json({ error: "Invitation has expired." });
     }
