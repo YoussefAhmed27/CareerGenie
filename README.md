@@ -1,240 +1,140 @@
-# CareerGenie Setup Guide
+# Local Setup Guide
 
-## 0. Make sure you are on CareerGenieV1 branch in VS Code (this is the new default branch so don't touch the main branch!)
-## 0. For general Platform usage, just run the frontend and node backend server (Do not run the ai servers --> these are excplicitly for interview simulation (Won't run for now so ignore!))
+This document provides the current steps required to run CareerGenie locally.
+
 ## 1. Prerequisites
-* Node.js (v18+)
-* Python (v3.10+)
-* Anaconda / Miniconda
-* Docker Desktop
+Ensure the following are installed:
+- Node.js 18+
+- Python 3.10+
+- Docker Desktop
+- Git
+- Anaconda or Miniconda (only required for the MER-based AI service)
 
-## 2. Secrets (.env)
-1. `backend-node/`: Copy `.env.example` -> rename to `.env`. Paste corresponding env file content.
-2. `CareerGenie/`: Copy `.env.example` -> rename to `.env`. Add API keys and corresponding env file content.
+From the repository root, switch to the correct branch:
 
-## 3. Install Dependencies
-Open terminals and run these exactly:
-
-**Frontend & Node API:**
-```bash
-cd backend-node
-npm install
-cd ../frontend
-npm install
+```powershell
+git checkout CareerGenieV1
 ```
 
-**AI Main & Proctor Servers (Venv):**
-```bash
+## 2. Environment Configuration
+Create the following files as needed.
+
+### Root .env
+```env
+DB_USER=admin
+DB_PASSWORD=your_local_db_password_here
+DB_NAME=careergenie
+DB_HOST=localhost
+DB_PORT=5432
+PGSSLMODE=disable
+```
+
+### backend-node/.env
+```env
+PORT=5000
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=admin
+DB_PASSWORD=your_local_db_password_here
+DB_NAME=careergenie
+JWT_SECRET=replace_me
+JWT_REFRESH_SECRET=replace_me
+ACCESS_TOKEN_TTL=15m
+REFRESH_TOKEN_TTL_DAYS=7
+CLIENT_ORIGIN=http://localhost:5173
+```
+
+Optional for Google login:
+```env
+GOOGLE_CLIENT_ID=your_google_client_id_here
+```
+
+### backend-ai/.env
+```env
+GROQ_API_KEY=replace_me
+GEMINI_API_KEY=replace_me
+DEEPGRAM_API_KEY=replace_me
+```
+
+### frontend/.env
+```env
+VITE_CV_SERVICE_URL=http://localhost:8002
+```
+
+## 3. Install Dependencies
+Run the following from the repository root:
+
+```powershell
+cd backend-node
+npm install
+
+cd ../frontend
+npm install
+
 cd ../backend-ai
 python -m venv venv
-.\venv\Scripts\Activate.ps1
+./venv/Scripts/Activate.ps1
 pip install -r requirements.txt
 ```
 
-**AI MER Server (Conda):**
-```bash
+If you want to use the MER-specific service, create the Conda environment as well:
+
+```powershell
 conda env create -f environment.yml
 ```
 
-## 4. Download Models (Manual)
-Download the heavy `.pth`, `.onnx`, and `.tar` weights from **[(https://drive.google.com/drive/folders/1a04iZI-K1FPXZni300pi50I8MePLpgRG?usp=sharing)]**.
-* Place models into `backend-ai/models/`
-* Place weights into `backend-ai/weights/`
-*(See exact placement in the Directory Tree at the bottom).*
+## 4. Start Infrastructure Services
+Start Docker Desktop, then run:
 
-## 5. Run the System
-You need 6 separate terminal tabs. Run these commands to spin up the entire system:
-
-**1. Database (Run in Root):**
-```bash
-docker compose up -d
+```powershell
+docker compose up -d db minio createbucket piston
 ```
 
-**2. Node Backend (Run in `backend-node/`):**
-```bash
+This starts the database, object storage, and code execution service required by the application.
+
+## 5. Start the Core Application
+Open separate terminals and run the following commands.
+
+### Terminal 1: Node backend
+```powershell
+cd backend-node
 npm run dev
 ```
 
-**3. React Frontend (Run in `frontend/`):**
-```bash
+### Terminal 2: Frontend
+```powershell
+cd frontend
 npm run dev
 ```
 
-**4. AI Main Server (Run in `backend-ai/`):**
-```bash
-.\venv\Scripts\Activate.ps1
-python -m uvicorn main:app --port 8000
-```
-
-**5. CV Assistant Service (Run in `backend-ai/cv-service/`):**
-```bash
+### Terminal 3: CV service
+```powershell
+cd backend-ai/cv-service
 python -m uvicorn app.main:app --port 8002
 ```
 
-**6. AI Proctor Server (Run in `backend-ai/`):**
-```bash
-.\venv\Scripts\Activate.ps1
+Open the application in your browser at:
+- http://localhost:5173
+
+## 6. Optional AI Interview Services
+These services are required only for the full interview simulation experience.
+
+### Terminal 4: AI main server
+```powershell
+cd backend-ai
+./venv/Scripts/Activate.ps1
+python -m uvicorn main:app --port 8000
+```
+
+### Terminal 5: Proctor server
+```powershell
+cd backend-ai
+./venv/Scripts/Activate.ps1
 python proctor_server.py
 ```
 
-**7. AI MER Server (Run in `backend-ai/`):**
-```bash
+### Terminal 6: MER server
+```powershell
+cd backend-ai
 conda run -n careergenie python mer_server.py
-```
-
-## 📂 Expected Directory Tree
-```text
-CareerGenie/
-├── .gitignore                 <-- (Hides environments and heavy media)
-├── docker-compose.yml
-├── README.md                  <-- (This file)
-├── tree.py
-├── backend-ai/
-│   ├── .env                   <-- (You must create this from .env.example)
-│   ├── .env.example
-│   ├── environment.yml
-│   ├── main.py
-│   ├── mer_engine.py
-│   ├── mer_server.py
-│   ├── proctor_engine.py
-│   ├── proctor_server.py
-│   ├── requirements.txt
-│   ├── start_servers.bat
-│   ├── models/                <-- (DOWNLOADED Externally)
-│   │   ├── best_careergenie_endtoend.pth
-|   |   ├── best.pt
-│   │   ├── en_US-kristin-medium.onnx
-│   │   └── en_US-kristin-medium.onnx.json
-│   ├── recordings/            <-- (Empty folder tracked via .gitkeep)
-│   └── weights/               <-- (DOWNLOADED Externally)
-│       ├── Alignment_RetinaFace.pth
-│       ├── Landmark_98.pkl
-│       ├── mobilenetV1X0.25_pretrain.tar
-│       └── MTL_backbone.pth
-├── backend-node/
-│   ├── .env                   <-- (You must create this from .env.example)
-│   ├── .env.example
-│   ├── docker-compose.yml
-│   ├── package-lock.json
-│   ├── package.json
-│   ├── SQL/
-│   │   ├── 00_RESET_DB.sql
-│   │   └── 02_add_refresh_token.sql
-│   └── src/
-│       ├── db.js
-│       ├── server.js
-│       ├── controllers/
-│       │   └── practice.controller.js
-│       ├── middleware/
-│       │   ├── auth.js
-│       │   ├── csrf.js
-│       │   ├── errorHandler.js
-│       │   └── validate.js
-│       ├── routes/
-│       │   ├── auth.js
-│       │   └── practice.js
-│       ├── services/
-│       │   └── practice.service.js
-│       └── validators/
-│           ├── auth.validators.js
-│           └── practice.validators.js
-└── frontend/
-    ├── eslint.config.js
-    ├── index.html
-    ├── package-lock.json
-    ├── package.json
-    ├── postcss.config.mjs
-    ├── tsconfig.app.json
-    ├── tsconfig.json
-    ├── tsconfig.node.json
-    ├── vite.config.ts
-    ├── public/
-    │   ├── avatar.glb
-    │   ├── avatar.png
-    │   ├── favicon.svg
-    │   ├── female-avatar.png
-    │   ├── genie-character.png
-    │   ├── icons.svg
-    │   ├── Login.png
-    │   ├── logo.png
-    │   ├── logo.svg
-    │   ├── model-f1.glb
-    │   ├── model-f2.glb
-    │   ├── model-female.glb
-    │   ├── model-female2.glb
-    │   ├── model-female3.glb
-    │   ├── model.glb
-    │   ├── model2.glb
-    │   ├── model3.glb
-    │   ├── neuralBackground.png
-    │   ├── vite.svg
-    │   ├── models/            <-- (Lightweight web UI models & shards)
-    │   │   ├── face_expression_model-shard1
-    │   │   ├── face_expression_model-weights_manifest.json
-    │   │   ├── face_landmark_68_model-shard1
-    │   │   ├── face_landmark_68_model-weights_manifest.json
-    │   │   ├── tiny_face_detector_model-shard1
-    │   │   └── tiny_face_detector_model-weights_manifest.json
-    │   ├── previews/
-    │   │   ├── Caitlin.png
-    │   │   ├── David.png
-    │   │   ├── kenji.png
-    │   │   └── Sarah.png
-    │   └── public/            <-- (Nested public assets)
-    │       ├── female-avatar.png
-    │       ├── genie-character.png
-    │       ├── logo.png
-    │       ├── neuralBackground.png
-    │       ├── vite.svg
-    │       ├── models/
-    │       │   ├── face_expression_model-shard1
-    │       │   ├── face_expression_model-weights_manifest.json
-    │       │   ├── face_landmark_68_model-shard1
-    │       │   ├── face_landmark_68_model-weights_manifest.json
-    │       │   ├── tiny_face_detector_model-shard1
-    │       │   └── tiny_face_detector_model-weights_manifest.json
-    │       └── previews/
-    │           ├── Caitlin.png
-    │           ├── David.png
-    │           ├── kenji.png
-    │           └── Sarah.png
-    └── src/
-        ├── App.css
-        ├── App.tsx
-        ├── index.css
-        ├── main.tsx
-        ├── assets/
-        │   ├── hero.png
-        │   ├── react.svg
-        │   └── vite.svg
-        ├── components/
-        │   ├── Home-page.tsx
-        │   ├── Hr-dashboard.tsx
-        │   ├── Login.tsx
-        │   ├── mockData/
-        │   │   └── data.ts
-        │   └── Navbar/
-        │       └── Navbar.tsx
-        └── interview_module/  <-- (Core interview UI logic)
-            ├── App.jsx
-            ├── interview-styles.css
-            ├── api/
-            │   └── interviewService.js
-            ├── components/
-            │   ├── Avatar.jsx
-            │   ├── Chat.jsx
-            │   ├── Codesandbox.jsx
-            │   ├── ErrorBoundary.jsx
-            │   ├── Experience.jsx
-            │   ├── FeedbackDisplay.jsx
-            │   ├── Header.jsx
-            │   ├── Message.jsx
-            │   ├── Setup.jsx
-            │   └── WebcamOverlay.jsx
-            ├── hooks/
-            │   ├── mediaHub.js
-            │   ├── useChat.js
-            │   └── useSpeech.js
-            └── utils/
-                └── visemeMapper.js
 ```
